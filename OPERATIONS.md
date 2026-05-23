@@ -354,16 +354,22 @@ kubectl exec -n confluent kafka-0 -- kafka-consumer-groups \
 
 ### Cost-Saving Strategies
 
-1. **Scale down during off-hours** (see above)
+1. **Auto-Cleanup with Date-Based Deletion** (Recommended for demos/tests)
+   - Automatically delete Kafka resources after a specified date
+   - Savings: **$184/month** when triggered
+   - See: `kafka/AUTO-CLEANUP.md` for setup
+   - Use case: Prevent demo clusters from running indefinitely
+
+2. **Scale down during off-hours** (see above)
    - Savings: ~$318/month (~62%)
 
-2. **Reduce broker count** (if workload allows)
+3. **Reduce broker count** (if workload allows)
    ```bash
    kubectl scale kafka kafka --replicas=6 -n confluent
    ```
    - Savings: ~$47/month (~9%)
 
-3. **Reduce broker storage** (if usage < 30GB)
+4. **Reduce broker storage** (if usage < 30GB)
    ```bash
    # Edit kafka-core.yaml
    spec:
@@ -373,7 +379,7 @@ kubectl exec -n confluent kafka-0 -- kafka-consumer-groups \
    ```
    - Savings: ~$8/month (~2%)
 
-4. **Use Savings Plans / Reserved Instances** for system nodes
+5. **Use Savings Plans / Reserved Instances** for system nodes
    - Savings: ~$40/month (~8%) if running 24/7 for 1 year
 
 ### Cost Monitoring

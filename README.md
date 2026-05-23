@@ -171,14 +171,14 @@ kafka-topics --bootstrap-server kafka.confluent.svc.cluster.local:9071 --list
 | Component | Monthly Cost |
 |-----------|--------------|
 | EKS Control Plane | $73 |
-| System Nodes (2x t3.large) | $120 |
+| System Nodes (1x t3.large) | $60 |
 | Kafka Brokers (12x spot) | $85 |
 | KRaft Controllers (5x spot) | $35 |
 | Schema Registry (2x spot) | $14 |
 | Kafka Connect (2x spot) | $14 |
 | VPC/Networking | $15 |
 | Jumpbox (t3.medium) | $8 |
-| **Total** | **~$364/month** |
+| **Total** | **~$304/month** |
 
 ## Troubleshooting
 

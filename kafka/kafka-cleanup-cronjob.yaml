@@ -1,0 +1,60 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kafka-auto-cleanup
+  namespace: confluent
+  labels:
+    app: kafka-cleanup
+spec:
+  # Run daily at 2 AM UTC
+  schedule: "0 2 * * *"
+
+  # Keep last 3 job runs for debugging
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: kafka-cleanup
+        spec:
+          serviceAccountName: kafka-cleanup
+          restartPolicy: OnFailure
+
+          containers:
+          - name: cleanup
+            image: python:3.11-slim
+            imagePullPolicy: IfNotPresent
+
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "Installing dependencies..."
+              pip install --quiet kubernetes
+
+              echo "Running cleanup script..."
+              python /scripts/cleanup.py
+
+            volumeMounts:
+            - name: cleanup-script
+              mountPath: /scripts
+              readOnly: true
+
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                cpu: 200m
+                memory: 256Mi
+
+          volumes:
+          - name: cleanup-script
+            configMap:
+              name: kafka-cleanup-script
+              defaultMode: 0755

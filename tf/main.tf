@@ -208,8 +208,8 @@ module "eks" {
     system_nodes = {
       name         = "${var.project_name}-system-v3"
       min_size     = 1
-      max_size     = 3
-      desired_size = 2
+      max_size     = 2
+      desired_size = 1
 
       instance_types = ["t3.large"]
       ami_type       = "AL2023_x86_64_STANDARD"

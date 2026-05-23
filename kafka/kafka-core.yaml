@@ -100,22 +100,6 @@ spec:
   storageClass:
     name: gp3
 
-  # Enable JMX metrics (port 7203), Jolokia (port 7777), Prometheus (port 7778)
-  metrics:
-    authentication:
-      type: mtls
-    jolokia:
-      accessControl:
-        enabled: true
-        secretRef: jmx-credentials
-    prometheus:
-      whitelist:
-      - "kafka.server:*"
-      - "kafka.network:*"
-      - "kafka.controller:*"
-      - "kafka.log:*"
-      - "java.lang:*"
-
   podTemplate:
     serviceAccountName: kafka
 
@@ -182,6 +166,9 @@ spec:
     # Performance
     - "num.network.threads=8"
     - "num.io.threads=8"
+    - "num.replica.fetchers=4"
+    - "replica.fetch.max.bytes=10485760"
+    - "replica.fetch.response.max.bytes=52428800"
 
   metricReporter:
     enabled: true
