@@ -150,7 +150,7 @@ resource "aws_eks_addon" "aws-ebs-csi-driver" {
 resource "aws_eks_addon" "coredns" {
   cluster_name                = "${var.project_name}-cluster"
   addon_name                  = "coredns"
-  addon_version               = "v1.14.2-eksbuild.4"  # K8s 1.35 compatible
+  addon_version               = "v1.14.2-eksbuild.4" # K8s 1.35 compatible
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -159,7 +159,7 @@ resource "aws_eks_addon" "coredns" {
 resource "aws_eks_addon" "kube-proxy" {
   cluster_name                = "${var.project_name}-cluster"
   addon_name                  = "kube-proxy"
-  addon_version               = "v1.35.3-eksbuild.8"  # K8s 1.35 compatible
+  addon_version               = "v1.35.3-eksbuild.8" # K8s 1.35 compatible
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
@@ -474,7 +474,7 @@ resource "helm_release" "confluent_operator" {
   name             = "confluent-operator"
   repository       = "https://packages.confluent.io/helm"
   chart            = "confluent-for-kubernetes"
-  version          = "0.1514.40"  # CFK 3.2.2 (latest as of 2026-04-30)
+  version          = "0.1514.40" # CFK 3.2.2 (latest as of 2026-04-30)
   namespace        = "confluent"
   create_namespace = true
   wait             = true
@@ -593,7 +593,7 @@ resource "kubectl_manifest" "kafka_arm64_nodepool" {
           requirements = [
             { key = "topology.kubernetes.io/zone", operator = "In", values = [each.value.zone] },
             { key = "kubernetes.io/arch", operator = "In", values = ["arm64"] },
-            { key = "karpenter.sh/capacity-type", operator = "In", values = ["spot"] },  # Spot-only for cost savings
+            { key = "karpenter.sh/capacity-type", operator = "In", values = ["spot"] }, # Spot-only for cost savings
             # Cheaper ARM64 instances, ordered by cost (cheapest first)
             { key = "node.kubernetes.io/instance-type", operator = "In", values = ["t4g.medium", "t4g.large", "t4g.xlarge", "t4g.2xlarge", "c6g.large", "c6g.xlarge", "c6g.2xlarge", "m6g.large", "m6g.xlarge", "m6g.2xlarge"] }
           ]
@@ -608,7 +608,7 @@ resource "kubectl_manifest" "kafka_arm64_nodepool" {
         }
       }
       limits = {
-        cpu = 12000  # 12,000 vCPUs per AZ (enough for Kafka cluster workload)
+        cpu = 12000 # 12,000 vCPUs per AZ (enough for Kafka cluster workload)
       }
       disruption = {
         consolidationPolicy = "WhenEmptyOrUnderutilized"

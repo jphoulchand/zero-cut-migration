@@ -66,12 +66,9 @@ resource "kubernetes_service_v1" "kube_dns_external" {
 # 2. Get system node IPs for jumpbox DNS configuration
 # -----------------------------------------------------------------------------
 
+# Note: This data source may not return results on first apply (nodes don't exist yet)
+# Use 'terraform output' after apply to get the actual IPs for DNS configuration
 data "aws_instances" "system_nodes" {
-  instance_tags = {
-    "karpenter.sh/nodepool" = ""  # System nodes don't have this tag
-    "alpha.eksctl.io/cluster-name" = ""  # System nodes don't have this either
-  }
-
   filter {
     name   = "tag:eks:cluster-name"
     values = [module.eks.cluster_name]
@@ -79,7 +76,7 @@ data "aws_instances" "system_nodes" {
 
   filter {
     name   = "tag:eks:nodegroup-name"
-    values = ["system_nodes"]
+    values = ["${var.project_name}-system-v3"]
   }
 
   filter {
@@ -90,20 +87,14 @@ data "aws_instances" "system_nodes" {
   depends_on = [module.eks]
 }
 
-# Get private IPs of system nodes
-data "aws_instance" "system_nodes" {
-  for_each = toset(data.aws_instances.system_nodes.ids)
-
-  instance_id = each.value
-}
-
 # -----------------------------------------------------------------------------
 # 3. Outputs
 # -----------------------------------------------------------------------------
 
 # System node IPs for DNS (space-separated for systemd-resolved)
+# Note: Will be empty on first apply, populated after system nodes are running
 locals {
-  system_node_ips = join(" ", [for instance in data.aws_instance.system_nodes : instance.private_ip])
+  system_node_ips = length(data.aws_instances.system_nodes.ids) > 0 ? join(" ", data.aws_instances.system_nodes.private_ips) : "pending"
 }
 
 output "kube_dns_node_ips" {
@@ -113,7 +104,7 @@ output "kube_dns_node_ips" {
 
 output "kube_dns_nodeport_info" {
   description = "Instructions for DNS configuration"
-  value = <<-EOT
+  value       = <<-EOT
 
     ╔════════════════════════════════════════════════════════════════╗
     ║           DNS CONFIGURATION VIA NODEPORT                        ║

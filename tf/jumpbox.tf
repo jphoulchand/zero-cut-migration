@@ -167,9 +167,10 @@ resource "aws_instance" "jump_box" {
   associate_public_ip_address = true # Needed since EIP is associated later
 
   # Configure DNS to use system nodes via NodePort for cluster.local resolution
-  user_data = base64encode(templatefile("${path.module}/scripts/setup_dns.sh", {
+  # Note: On first apply, system_node_ips may be "pending" - DNS setup will need manual update
+  user_data = local.system_node_ips != "pending" ? base64encode(templatefile("${path.module}/scripts/setup_dns.sh", {
     system_node_ips = local.system_node_ips
-  }))
+  })) : base64encode("#!/bin/bash\necho 'DNS setup pending - run terraform output kube_dns_node_ips after apply'")
 
   lifecycle {
     ignore_changes = [
