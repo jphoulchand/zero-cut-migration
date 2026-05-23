@@ -1,0 +1,237 @@
+# =============================================================================
+# Kafka Cluster with mTLS for Inter-Broker Communication
+# Confluent for Kubernetes v3.2.2
+# =============================================================================
+
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: KRaftController
+metadata:
+  name: kraftcontroller
+  namespace: confluent
+spec:
+  replicas: 5
+
+  image:
+    application: confluentinc/cp-server:7.9.0
+    init: confluentinc/confluent-init-container:2.9.0
+
+  dataVolumeCapacity: 10Gi
+  storageClass:
+    name: gp3
+
+  podTemplate:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 2Gi
+      limits:
+        cpu: 1000m
+        memory: 4Gi
+
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
+
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - kraftcontroller
+          topologyKey: topology.kubernetes.io/zone
+
+  tls:
+    secretRef: kafka-tls
+
+  configOverrides:
+    server:
+    - "ssl.endpoint.identification.algorithm=https"
+    - "ssl.client.auth=required"
+    - "ssl.keystore.type=JKS"
+    - "ssl.truststore.type=JKS"
+    - "ssl.protocol=TLSv1.3"
+    - "ssl.enabled.protocols=TLSv1.3,TLSv1.2"
+
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: Kafka
+metadata:
+  name: kafka
+  namespace: confluent
+spec:
+  replicas: 12
+
+  image:
+    application: docker.io/confluentinc/cp-server:7.9.0
+    init: confluentinc/confluent-init-container:2.9.0
+
+  dependencies:
+    kRaftController:
+      clusterRef:
+        name: kraftcontroller
+
+  dataVolumeCapacity: 100Gi
+  storageClass:
+    name: gp3
+
+  podTemplate:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 4Gi
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
+
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - kafka
+          topologyKey: topology.kubernetes.io/zone
+
+  tls:
+    secretRef: kafka-tls
+
+  listeners:
+    internal:
+      authentication:
+        type: mtls
+        principalMappingRules:
+        - "RULE:^CN=(.*?),OU=Engineering,O=Confluent,L=MountainView,ST=CA,C=US$/$1/"
+        - "DEFAULT"
+      tls:
+        enabled: true
+        secretRef: kafka-tls
+
+  configOverrides:
+    server:
+    - "ssl.endpoint.identification.algorithm=https"
+    - "ssl.client.auth=required"
+    - "security.inter.broker.protocol=SSL"
+    - "ssl.keystore.type=JKS"
+    - "ssl.truststore.type=JKS"
+    - "ssl.protocol=TLSv1.3"
+    - "ssl.enabled.protocols=TLSv1.3,TLSv1.2"
+    - "ssl.cipher.suites=TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+    - "default.replication.factor=3"
+    - "min.insync.replicas=2"
+    - "offsets.topic.replication.factor=3"
+    - "transaction.state.log.replication.factor=3"
+    - "transaction.state.log.min.isr=2"
+    - "log.retention.hours=168"
+    - "compression.type=producer"
+    - "num.network.threads=8"
+    - "num.io.threads=8"
+
+  metricReporter:
+    enabled: true
+    bootstrapEndpoint: kafka.confluent.svc.cluster.local:9071
+    tls:
+      enabled: true
+
+  rackAssignment:
+    nodeLabels:
+    - topology.kubernetes.io/zone
+
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: SchemaRegistry
+metadata:
+  name: schemaregistry
+  namespace: confluent
+spec:
+  replicas: 3
+
+  image:
+    application: confluentinc/cp-schema-registry:7.9.0
+    init: confluentinc/confluent-init-container:2.9.0
+
+  podTemplate:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
+
+  tls:
+    secretRef: kafka-tls
+
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9071
+      tls:
+        enabled: true
+        secretRef: kafka-tls
+      authentication:
+        type: mtls
+
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: Connect
+metadata:
+  name: connect
+  namespace: confluent
+spec:
+  replicas: 2
+
+  image:
+    application: confluentinc/cp-server-connect:7.9.0
+    init: confluentinc/confluent-init-container:2.9.0
+
+  podTemplate:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
+
+  tls:
+    secretRef: kafka-tls
+
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9071
+      tls:
+        enabled: true
+        secretRef: kafka-tls
+      authentication:
+        type: mtls
+
+    schemaRegistry:
+      url: https://schemaregistry.confluent.svc.cluster.local:8081
+      tls:
+        enabled: true
+        secretRef: kafka-tls

@@ -1,0 +1,98 @@
+#!/bin/bash
+set -e # Exit immediately if a command exits with a non-zero status
+
+# --- CONFIGURATION ---
+BASH_PROFILE="$HOME/.bash_profile"
+INSTALL_BASE="/opt/binaries"
+JAVA_URL="https://corretto.aws/downloads/latest/amazon-corretto-21-x64-linux-jdk.tar.gz"
+KAFKA_URL="https://packages.confluent.io/archive/8.1/confluent-8.1.1.tar.gz"
+
+echo installing netcat
+sudo yum install nc bind-utils -y
+
+# Ensure wget is installed (for robust environments)
+if ! command -v wget &> /dev/null; then
+    echo "wget not found. Attempting to install..."
+    # Assuming Debian/Ubuntu or RedHat/CentOS compatibility
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get update && sudo apt-get install -y wget
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y wget
+    else
+        echo "Error: Cannot find package manager to install wget. Please install it manually."
+        exit 1
+    fi
+fi
+
+
+# --- 1. DIRECTORY PREPARATION ---
+
+echo "--- 1. Preparing Installation Directory ---"
+sudo mkdir -p "$INSTALL_BASE"
+sudo chown -R $(whoami): "$INSTALL_BASE"
+
+
+# --- 2. INSTALL JAVA (AMAZON CORRETTO 21) ---
+
+echo -e "\n--- 2. Installing Java (Amazon Corretto 21) ---"
+JAVA_ROOT="$INSTALL_BASE/jdk"
+JAVA_FILENAME=$(basename "$JAVA_URL")
+
+# Download using wget
+echo "Downloading $JAVA_FILENAME to /tmp/..."
+wget -q "$JAVA_URL" -O "/tmp/$JAVA_FILENAME"
+
+# Extract to predictable 'jdk' directory
+echo "Extracting Java to $JAVA_ROOT..."
+mkdir -p "$JAVA_ROOT"
+tar -xzf "/tmp/$JAVA_FILENAME" --strip-components=1 -C "$JAVA_ROOT" 
+
+JAVA_BIN="$JAVA_ROOT/bin"
+
+# Update BASH_PROFILE for JAVA_HOME and PATH
+echo "Updating $BASH_PROFILE for Java environment variables..."
+{
+    echo -e "\n# --- Custom Environment Setup (Java & Kafka) ---"
+    echo "export JAVA_HOME=\"$JAVA_ROOT\""
+    echo "export PATH=\$PATH:$JAVA_BIN"
+} >> "$BASH_PROFILE"
+
+# Clean up temporary file
+rm -f "/tmp/$JAVA_FILENAME"
+
+
+# --- 3. INSTALL KAFKA (CONFLUENT PLATFORM) ---
+
+echo -e "\n--- 3. Installing Confluent Platform ---"
+KAFKA_ROOT="$INSTALL_BASE/cp"
+KAFKA_FILENAME=$(basename "$KAFKA_URL")
+
+# Download using wget
+echo "Downloading $KAFKA_FILENAME to /tmp/..."
+wget -q "$KAFKA_URL" -O "/tmp/$KAFKA_FILENAME"
+
+# Extract to predictable 'kafka' directory
+echo "Extracting Kafka to $KAFKA_ROOT..."
+mkdir -p "$KAFKA_ROOT"
+tar -xzf "/tmp/$KAFKA_FILENAME" --strip-components=1 -C "$KAFKA_ROOT"
+
+KAFKA_BIN="$KAFKA_ROOT/bin"
+
+# Update BASH_PROFILE for Kafka PATH
+echo "Updating $BASH_PROFILE for Kafka environment variables..."
+echo "export PATH=\$PATH:/opt/binaries/cp/bin:/opt/binaries/jdk/bin" >> "$BASH_PROFILE"
+
+# Clean up temporary file
+rm -f "/tmp/$KAFKA_FILENAME"
+
+
+# --- 4. ACTIVATE ENVIRONMENT ---
+
+echo -e "\n--- 4. Activation and Verification ---"
+# Activate the new PATH variables in the current session
+source "$BASH_PROFILE"
+
+echo "Installation complete. Environment Activated."
+echo "Current JAVA_HOME: $JAVA_HOME"
+echo "Kafka executable path: $(which kafka-acls)"
+echo "Java executable path: $(which java)"

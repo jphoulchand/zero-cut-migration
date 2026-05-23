@@ -1,0 +1,390 @@
+---
+# =============================================================================
+# Kafka Cluster with mTLS for Inter-Broker Communication
+# Confluent for Kubernetes v3.1.1
+# =============================================================================
+# This configuration deploys a 12-broker Kafka cluster across 3 AZs with:
+# - TLS encryption for inter-broker communication
+# - mTLS (mutual TLS) authentication between brokers
+# - Self-signed certificates
+# - KRaft mode (no ZooKeeper)
+#
+# Prerequisites:
+# 1. Generate certificates: cd certs && ./generate-kafka-certs.sh
+# 2. Apply secrets: kubectl apply -f certs/generated-certs/secrets/apply-secrets.yaml
+# 3. Apply this file: kubectl apply -f kafka-mtls.yaml
+# =============================================================================
+
+apiVersion: platform.confluent.io/v1beta1
+kind: Kafka
+metadata:
+  name: kafka
+  namespace: confluent
+spec:
+  # ==========================================================================
+  # Cluster Configuration
+  # ==========================================================================
+  replicas: 12
+
+  # KRaft mode configuration (no ZooKeeper)
+  kraft:
+    enabled: true
+    # KRaft controllers are deployed separately
+
+  # ==========================================================================
+  # Resource Allocation
+  # ==========================================================================
+  podTemplate:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 4Gi
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+
+    # Tolerations for ARM64 Karpenter nodes
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
+
+    # Node affinity to ensure brokers spread across AZs
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - kafka
+          topologyKey: topology.kubernetes.io/zone
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: architecture
+              operator: In
+              values:
+              - arm64
+
+  # ==========================================================================
+  # Storage Configuration
+  # ==========================================================================
+  dataVolumeCapacity: 100Gi
+  storageClass:
+    name: gp3
+
+  # ==========================================================================
+  # TLS Configuration for Inter-Broker Communication
+  # ==========================================================================
+  tls:
+    # Enable TLS for inter-broker communication
+    enabled: true
+
+    # Use internal Kafka listener for inter-broker (not external)
+    internalListener: true
+
+    # Reference to the TLS secret containing keystore and truststore
+    secretRef: kafka-tls
+
+    # JKS keystore/truststore configuration
+    jksPassword:
+      secretRef: kafka-tls
+
+  # ==========================================================================
+  # Listener Configuration
+  # ==========================================================================
+  listeners:
+    # Internal listener (inter-broker and clients within Kubernetes)
+    internal:
+      # Enable TLS on internal listener
+      tls:
+        enabled: true
+        secretRef: kafka-tls
+
+      # Enable mTLS (mutual TLS) - requires client certificates
+      authentication:
+        type: mtls
+        principalMappingRules:
+        - "RULE:^CN=(.*?),OU=Engineering,O=Confluent,L=MountainView,ST=CA,C=US$/$1/"
+        - "DEFAULT"
+
+      # Internal port
+      port: 9092
+
+    # External listener (for access from jumpbox)
+    external:
+      # Enable TLS on external listener
+      tls:
+        enabled: true
+        secretRef: kafka-tls
+
+      # For external, we can optionally use SASL or keep mTLS
+      # Using TLS only (encryption but not client cert auth) for easier jumpbox access
+      authentication:
+        type: plain
+        jaasConfig:
+          secretRef: kafka-users  # Create this secret separately if using SASL
+
+      # Expose via LoadBalancer
+      externalAccess:
+        type: loadBalancer
+        loadBalancerSourceRanges:
+        - "10.19.192.0/24"  # Jumpbox VPC CIDR
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb
+          service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+          service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+  # ==========================================================================
+  # Inter-Broker Configuration
+  # ==========================================================================
+  configOverrides:
+    server:
+    - "ssl.endpoint.identification.algorithm=https"
+    - "ssl.client.auth=required"  # Require client certificates (mTLS)
+
+    # Inter-broker protocol - use SSL
+    - "security.inter.broker.protocol=SSL"
+
+    # SSL configuration for inter-broker
+    - "ssl.keystore.type=JKS"
+    - "ssl.truststore.type=JKS"
+
+    # Minimum TLS version
+    - "ssl.protocol=TLSv1.3"
+    - "ssl.enabled.protocols=TLSv1.3,TLSv1.2"
+
+    # Cipher suites (strong ciphers only)
+    - "ssl.cipher.suites=TLS_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+
+    # Default replication factor and min ISR
+    - "default.replication.factor=3"
+    - "min.insync.replicas=2"
+    - "offsets.topic.replication.factor=3"
+    - "transaction.state.log.replication.factor=3"
+    - "transaction.state.log.min.isr=2"
+
+    # Rack awareness (for AZ distribution)
+    - "replica.selector.class=org.apache.kafka.common.replica.RackAwareReplicaSelector"
+
+    # Log retention
+    - "log.retention.hours=168"
+    - "log.segment.bytes=1073741824"
+    - "log.retention.check.interval.ms=300000"
+
+    # Compression
+    - "compression.type=producer"
+
+    # Performance tuning
+    - "num.network.threads=8"
+    - "num.io.threads=8"
+    - "socket.send.buffer.bytes=102400"
+    - "socket.receive.buffer.bytes=102400"
+    - "socket.request.max.bytes=104857600"
+
+  # ==========================================================================
+  # Metrics and Monitoring
+  # ==========================================================================
+  metricReporter:
+    enabled: true
+    bootstrapEndpoint: kafka.confluent.svc.cluster.local:9092
+    tls:
+      enabled: true
+      secretRef: kafka-tls
+
+  # ==========================================================================
+  # Rack Awareness (Availability Zone)
+  # ==========================================================================
+  rackAssignment:
+    rackTopology: "topology.kubernetes.io/zone"
+
+---
+# =============================================================================
+# KRaft Controller Cluster (for Kafka metadata)
+# =============================================================================
+apiVersion: platform.confluent.io/v1beta1
+kind: KRaftController
+metadata:
+  name: kraft-controller
+  namespace: confluent
+spec:
+  replicas: 5
+
+  # ==========================================================================
+  # Resource Allocation
+  # ==========================================================================
+  podTemplate:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 2Gi
+      limits:
+        cpu: 1000m
+        memory: 4Gi
+
+    # Tolerations for ARM64 nodes
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
+
+    # Spread across AZs
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - kraft-controller
+          topologyKey: topology.kubernetes.io/zone
+
+  # ==========================================================================
+  # Storage
+  # ==========================================================================
+  dataVolumeCapacity: 10Gi
+  storageClass:
+    name: gp3
+
+  # ==========================================================================
+  # TLS Configuration for Controllers
+  # ==========================================================================
+  tls:
+    enabled: true
+    secretRef: kafka-tls
+    jksPassword:
+      secretRef: kafka-tls
+
+  # ==========================================================================
+  # Controller Configuration
+  # ==========================================================================
+  configOverrides:
+    server:
+    - "ssl.endpoint.identification.algorithm=https"
+    - "ssl.client.auth=required"
+    - "ssl.keystore.type=JKS"
+    - "ssl.truststore.type=JKS"
+    - "ssl.protocol=TLSv1.3"
+    - "ssl.enabled.protocols=TLSv1.3,TLSv1.2"
+
+  # ==========================================================================
+  # Rack Awareness
+  # ==========================================================================
+  rackAssignment:
+    rackTopology: "topology.kubernetes.io/zone"
+
+---
+# =============================================================================
+# Schema Registry (Optional - with TLS)
+# =============================================================================
+apiVersion: platform.confluent.io/v1beta1
+kind: SchemaRegistry
+metadata:
+  name: schemaregistry
+  namespace: confluent
+spec:
+  replicas: 3
+
+  # ==========================================================================
+  # Kafka Connection (with TLS/mTLS)
+  # ==========================================================================
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9092
+      tls:
+        enabled: true
+        secretRef: kafka-tls
+      authentication:
+        type: mtls
+        principalMappingRules:
+        - "RULE:^CN=(.*?),OU=Engineering,O=Confluent,L=MountainView,ST=CA,C=US$/$1/"
+        - "DEFAULT"
+
+  # ==========================================================================
+  # Resources
+  # ==========================================================================
+  podTemplate:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
+
+  # ==========================================================================
+  # TLS for Schema Registry API
+  # ==========================================================================
+  tls:
+    enabled: true
+    secretRef: kafka-tls
+
+---
+# =============================================================================
+# Kafka Connect (Optional - with TLS)
+# =============================================================================
+apiVersion: platform.confluent.io/v1beta1
+kind: Connect
+metadata:
+  name: connect
+  namespace: confluent
+spec:
+  replicas: 2
+
+  # ==========================================================================
+  # Kafka Connection (with TLS/mTLS)
+  # ==========================================================================
+  dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9092
+      tls:
+        enabled: true
+        secretRef: kafka-tls
+      authentication:
+        type: mtls
+        principalMappingRules:
+        - "RULE:^CN=(.*?),OU=Engineering,O=Confluent,L=MountainView,ST=CA,C=US$/$1/"
+        - "DEFAULT"
+
+    schemaRegistry:
+      url: https://schemaregistry.confluent.svc.cluster.local:8081
+      tls:
+        enabled: true
+        secretRef: kafka-tls
+
+  # ==========================================================================
+  # Resources
+  # ==========================================================================
+  podTemplate:
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
+
+  # ==========================================================================
+  # TLS for Connect REST API
+  # ==========================================================================
+  tls:
+    enabled: true
+    secretRef: kafka-tls

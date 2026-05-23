@@ -1,0 +1,156 @@
+# 1. THE CONTROLLERS
+apiVersion: platform.confluent.io/v1beta1
+kind: KRaftController
+metadata:
+  name: kraft-controller
+  namespace: confluent
+spec:
+  replicas: 3
+  image:
+    application: confluentinc/cp-server:8.1.0
+    init: confluentinc/confluent-init-container:3.1.0
+
+  dataVolumeCapacity: 10Gi
+  
+  configOverrides:
+    jvm: 
+      - "-Xmx2G"
+      - "-Xms2G"
+    server:
+      - "process.roles=controller"
+      - "controller.listener.names=CONTROLLER"
+      - "listeners=CONTROLLER://:9074"
+      - "listener.security.protocol.map=CONTROLLER:PLAINTEXT,REPLICATION:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT" 
+
+  mountedSecrets:
+    - secretRef: credential
+
+  podTemplate:
+    topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: "topology.kubernetes.io/zone"
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: "kraft-controller"
+    resources:
+      requests:
+        memory: "2.5Gi"
+      limits:
+        memory: "3Gi"
+
+    # 1. Tolerations: Must match the 'taints' in your NodePool
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"
+      effect: "NoSchedule"
+    
+    # 2. Affinity: Must match the 'labels' in your NodePool
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: node-type
+              operator: In
+              values:
+              - kafka-arm64
+
+---
+# 2. THE BROKERS
+apiVersion: platform.confluent.io/v1beta1
+kind: Kafka
+metadata:
+  name: kafka
+  namespace: confluent
+spec:
+  replicas: 8
+  rackAssignment:
+    nodeLabels:
+    - topology.kubernetes.io/zone
+  image:
+    application: confluentinc/cp-server:8.1.0
+    init: confluentinc/confluent-init-container:3.1.0
+
+  dataVolumeCapacity: 20Gi
+  
+  dependencies:
+    kRaftController:
+      clusterRef:
+        name: kraft-controller
+  
+  configOverrides:
+    jvm: 
+      - "-Xmx2G"
+      - "-Xms2G"
+    server:
+      - "process.roles=broker"
+      - "listeners=EXTERNAL://:9092,INTERNAL://:9071,REPLICATION://:9072,TOKEN://:9073"
+      - "listener.security.protocol.map=EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT,REPLICATION:PLAINTEXT,CONTROLLER:PLAINTEXT,TOKEN:PLAINTEXT"
+      - "inter.broker.listener.name=INTERNAL"
+      - "controller.listener.names=CONTROLLER"
+      - "min.insync.replicas=2"
+      - "default.replication.factor=3"
+      - "confluent.balancer.enable=true" #SBC
+      - "confluent.balancer.heal.uneven.load.trigger=ANY_UNEVEN_LOAD"
+  
+  mountedSecrets:
+    - secretRef: credential
+    
+  podTemplate:
+    resources:
+      requests:
+        memory: "2.5Gi"
+      limits:
+        memory: "3Gi"
+    tolerations:
+    - key: "arch"
+      operator: "Equal"
+      value: "arm64"           
+      effect: "NoSchedule"
+    topologySpreadConstraints: #
+      - maxSkew: 1
+        topologyKey: "topology.kubernetes.io/zone"
+        whenUnsatisfiable: DoNotSchedule
+        minDomains: 3 # <--- The Magic Number. Forces spread across 3 AZs.
+        labelSelector:
+          matchLabels:
+            # IMPORTANT: Matches the Broker pods
+            app: "kafka"
+
+
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: node-type      
+              operator: In
+              values:
+              - kafka-arm64       
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-reader
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: read-nodes-global
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: confluent
+roleRef:
+  kind: ClusterRole
+  name: node-reader
+  apiGroup: rbac.authorization.k8s.io
+

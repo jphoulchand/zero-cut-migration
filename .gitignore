@@ -1,0 +1,65 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Terraform plans
+*.tfplan
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# SSH Keys
+*.pem
+*.key
+id_rsa*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Certificates (auto-generated)
+kafka/certs/generated-certs/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Environment files
+.env
+.env.local

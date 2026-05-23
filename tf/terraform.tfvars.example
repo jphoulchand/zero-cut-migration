@@ -1,0 +1,106 @@
+# =============================================================================
+# terraform.tfvars.example
+#
+# Copy this file to terraform.tfvars and fill in your values.
+# Run scripts/validate_tfvars.sh before your first terraform plan.
+# =============================================================================
+
+
+# --- IDENTITY ------------------------------------------------------------------
+
+# Short identifier for all AWS resources (used as name prefix).
+# Keep it 6-7 chars, lowercase alphanumeric and hyphens only.
+# Example: "jph-ho", "team-a", "cflt-01"
+project_name = "CHANGE_ME"
+
+# Your email address. Used for AWS resource tags and Confluent tracking.
+owner_email = "you@example.com"
+
+
+# --- AWS REGION & AVAILABILITY ZONE -------------------------------------------
+
+# AWS region where the EKS cluster and all resources will be deployed.
+# Must be a valid region name (e.g. eu-west-1, us-east-1, ap-southeast-1).
+aws_region = "eu-west-1"
+
+# The Availability Zone for the Jump Box subnet within the region above.
+# Must be a valid AZ in the chosen region (e.g. eu-west-1a, us-east-1b).
+# Tip: run `aws ec2 describe-availability-zones --region <aws_region>` to list AZs.
+jump_box_availability_zone = "eu-west-1a"
+
+
+# --- NETWORKING ---------------------------------------------------------------
+
+# A /16 CIDR block reserved exclusively for this deployment.
+# It must not overlap with any existing VPC in your AWS account.
+#
+# This single /16 is subdivided internally:
+#   - EKS VPC:      first /18  (e.g. 10.X.0.0/18)
+#   - Jumpbox VPC:  a /24      (e.g. 10.X.192.0/24)
+#
+# Safe private ranges to pick from:
+#   10.0.0.0/8    →  pick any unused 10.X.0.0/16
+#   172.16.0.0/12 →  pick any unused 172.16-31.0.0/16
+#   192.168.0.0/16 (only one /16 available here)
+#
+# Examples of commonly used /16s (verify none are already in use):
+#   10.0.0.0/16, 10.1.0.0/16, 10.19.0.0/16, 172.20.0.0/16
+#
+# The validate_tfvars.sh script will check for conflicts automatically.
+vpcs_cidr_block = "10.X.0.0/16"
+
+
+# --- KUBERNETES ---------------------------------------------------------------
+
+# EKS Kubernetes version. Must be a version currently supported by AWS EKS.
+# Check supported versions: https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
+# NOTE: EKS only allows one minor version upgrade at a time (1.33→1.34→1.35)
+# Latest version with security patches: 1.35
+# Current stage: 1.34 (upgrade to 1.35 after Stage 1 completes)
+kubernetes_version = "1.34"  # See tf/STAGED-UPGRADE.md for upgrade steps
+
+
+# --- JUMP BOX ACCESS ----------------------------------------------------------
+
+# The name of an existing EC2 Key Pair in your AWS account (not the filename).
+# To list existing key pairs: aws ec2 describe-key-pairs --region <aws_region>
+# To create a new one:
+#   aws ec2 create-key-pair --key-name my-key --query KeyMaterial \
+#     --output text > ~/.ssh/my-key.pem && chmod 600 ~/.ssh/my-key.pem
+ssh_key_name = "your-keypair-name"
+
+# Absolute path to the private key file (.pem) on your local machine.
+# Must have permissions 400 or 600 (chmod 600 ~/.ssh/your-key.pem).
+ssh_private_key_path = "~/.ssh/your-key.pem"
+
+# EC2 instance type for the Jump Box.
+# t3.large is sufficient for kubectl, Kafka CLI tools, and light testing.
+# Upgrade to t3.xlarge if running heavier workloads from the jump box.
+instance_type = "t3.large"
+
+# SSH username for the Jump Box AMI.
+# Amazon Linux 2023 (default AMI) → "ec2-user"
+# Ubuntu → "ubuntu"
+ssh_user = "ec2-user"
+
+# --- SSH SECURITY (REQUIRED) --------------------------------------------------
+
+# CIDR blocks allowed to SSH to the jumpbox.
+# For security, this is REQUIRED and replaces the previous open access (0.0.0.0/0).
+#
+# Examples:
+#   Single IP:        ["134.238.54.136/32"]
+#   Multiple IPs:     ["134.238.54.136/32", "203.0.113.42/32"]
+#   Office network:   ["10.0.0.0/8"]
+#   VPN + Home:       ["134.238.54.136/32", "YOUR.HOME.IP/32"]
+#
+# Find your IP: curl ifconfig.me
+allowed_ssh_cidrs = ["134.238.54.136/32"]  # VPN IP
+
+# --- DNS AUTOMATION (NLB-based) -----------------------------------------------
+# A Network Load Balancer will be created to provide stable DNS resolution
+# for Kubernetes services (kafka.confluent.svc.cluster.local, etc.)
+# This eliminates the need for manual DNS IP updates in /etc/systemd/resolved.conf
+#
+# Cost: ~$16/month for NLB
+# No configuration needed - handled automatically by dns.tf
