@@ -1,0 +1,356 @@
+# =============================================================================
+# JMX Exporter Configuration for Kafka Brokers
+# Official Confluent configuration from:
+# https://github.com/confluentinc/jmx-monitoring-stacks
+#
+# Deploy this before applying kafka-core.yaml
+#
+# This ConfigMap configures the JMX exporter sidecar to scrape Kafka metrics
+# and expose them in Prometheus format on port 9091
+#
+# Deploy:
+#   kubectl apply -f kafka-jmx-config.yaml
+#
+# Metrics endpoint: http://kafka-<pod-id>.kafka.confluent.svc.cluster.local:9091/metrics
+# =============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-jmx-config
+  namespace: confluent
+data:
+  config.yaml: |
+    ---
+    hostPort: localhost:9999
+    startDelaySeconds: 120
+    lowercaseOutputName: true
+    lowercaseOutputLabelNames: true
+    blacklistObjectNames:
+      - "kafka.consumer:type=*,id=*"
+      - "kafka.consumer:type=*,client-id=*"
+      - "kafka.consumer:type=*,client-id=*,node-id=*"
+      - "kafka.producer:type=*,id=*"
+      - "kafka.producer:type=*,client-id=*"
+      - "kafka.producer:type=*,client-id=*,node-id=*"
+      - "kafka.*:type=kafka-metrics-count,*"
+      - "kafka.admin.client:*"
+      - "kafka.server:type=*,cipher=*,protocol=*,listener=*,networkProcessor=*"
+      - "kafka.server:type=app-info,id=*"
+      - "kafka.rest:*"
+      - "rest.utils:*"
+      - "io.confluent.common.security.jetty:*"
+      - "io.confluent.rest:*"
+      - "confluent.metadata.service:type=app-info,id=*"
+      - "confluent.metadata.service:type=app-info,client-id=*"
+      - "confluent.metadata:type=kafkaauthstore,*"
+    rules:
+      - pattern: 'kafka.network<type=RequestMetrics, name=DeprecatedRequestsPerSec, request=(.+), version=(.+), clientSoftwareName=(.+), clientSoftwareVersion=(.+)><>(Count)'
+        name: kafka_network_requestmetrics_deprecatedrequestspersec_$5
+        type: COUNTER
+        cache: true
+        labels:
+          api_name:  "$1"
+          api_version: "$2"
+          client_software_name: "$3"
+          client_software_version: "$4"
+      - pattern: 'kafka.network<type=RequestMetrics, name=DeprecatedRequestsPerSec, request=(.+), version=(.+), clientSoftwareName=(.+), clientSoftwareVersion=(.+)><>(Count|OneMinuteRate|FiveMinuteRate|FifteenMinuteRate)'
+        name: kafka_network_requestmetrics_deprecatedrequestspersec_$5
+        type: GAUGE
+        cache: true
+        labels:
+          api_name:  "$1"
+          api_version: "$2"
+          client_software_name: "$3"
+          client_software_version: "$4"
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), topic=(.+), partition=(.*)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        cache: true
+        labels:
+          clientId: "$3"
+          topic: "$4"
+          partition: "$5"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), topic=(.+), partition=(.+)><>Value
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        cache: true
+        labels:
+          topic: "$4"
+          partition: "$5"
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), brokerHost=(.+), brokerPort=(.+)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        cache: true
+        labels:
+          clientId: "$3"
+          broker: "$4:$5"
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), brokerHost=(.+), brokerPort=(.+)><>Count
+        name: kafka_server_$1_$2
+        cache: true
+        labels:
+          clientId: "$3"
+          broker: "$4:$5"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+), (.+)=(.+), (.+)=(.+)><>(Count|Value)
+        name: kafka_$1_$2_$3
+        cache: true
+        labels:
+          "$4": "$5"
+          "$6": "$7"
+          "$8": "$9"
+          "$10": "$11"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+), (.+)=(.+)><>(Count|Value)
+        name: kafka_$1_$2_$3
+        cache: true
+        labels:
+          "$4": "$5"
+          "$6": "$7"
+          "$8": "$9"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+)><>(Count|Value)
+        name: kafka_$1_$2_$3
+        cache: true
+        labels:
+          "$4": "$5"
+          "$6": "$7"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.*), (.+)=(.+)><>(\d+)thPercentile
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        cache: true
+        labels:
+          "$4": "$5"
+          "$6": "$7"
+          quantile: "0.$8"
+      - pattern: kafka.(\w+)<type=(.+), (.+)=(.+), (.+)=(.+), (.+)=(.+)><>Value
+        name: kafka_$1_$2
+        cache: true
+        labels:
+          "$3": "$4"
+          "$5": "$6"
+          "$7": "$8"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>(Count|Value)
+        name: kafka_$1_$2_$3
+        cache: true
+        labels:
+          "$4": "$5"
+      - pattern: kafka.(\w+)<type=(.+), (.+)=(.+), (.+)=(.+)><>(Count|Value)
+        name: kafka_$1_$2
+        cache: true
+        labels:
+          "$3": "$4"
+          "$5": "$6"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>(Count|Value)
+        name: kafka_$1_$2_$3
+      - pattern: kafka.(\w+)<type=(.+), (.+)=(.+)><>Value
+        name: kafka_$1_$2
+        cache: true
+        labels:
+          "$3": "$4"
+      - pattern: 'kafka.server<type=KafkaRequestHandlerPool, name=RequestHandlerAvgIdlePercent><>OneMinuteRate:'
+        name: kafka_server_kafkarequesthandlerpool_requesthandleravgidlepercent_oneminuterate
+        type: GAUGE
+      - pattern: kafka.server<type=socket-server-metrics, clientSoftwareName=(.+), clientSoftwareVersion=(.+), listener=(.+), networkProcessor=(.+)><>connections
+        name: kafka_server_socketservermetrics_connections
+        type: GAUGE
+        cache: true
+        labels:
+          client_software_name: "$1"
+          client_software_version: "$2"
+          listener: "$3"
+          network_processor: "$4"
+      - pattern: "kafka.server<type=socket-server-metrics, listener=(.+), networkProcessor=(.+)><>(.+):"
+        name: kafka_server_socketservermetrics_$3
+        type: GAUGE
+        cache: true
+        labels:
+          listener: "$1"
+          network_processor: "$2"
+      - pattern: kafka.coordinator.(\w+)<type=(.+), name=(.+)><>(Count|Value)
+        name: kafka_coordinator_$1_$2_$3
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.*)><>(\d+)thPercentile
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        cache: true
+        labels:
+          "$4": "$5"
+          quantile: "0.$6"
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>(\d+)thPercentile
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        cache: true
+        labels:
+          quantile: "0.$4"
+      - pattern: kafka.server<type=confluent-auth-store-metrics><>(.+):(.*)
+        name: confluent_auth_store_metrics_$1
+        type: GAUGE
+        cache: true
+      - pattern: confluent.(\w+)<type=(.+), (.+)=(.+), (.+)=(.+), (.+)=(.+)><>(Value|Count)
+        name: confluent_$1_$2
+        type: GAUGE
+        cache: true
+        labels:
+          "$3": "$4"
+          "$5": "$6"
+          "$7": "$8"
+      - pattern: confluent.(.+)<type=(.+), (.+)=(.+), (.+)=(.+)><>Value
+        name: confluent_$1_$2
+        type: GAUGE
+        cache: true
+        labels:
+          "$3": "$4"
+          "$5": "$6"
+      - pattern: 'confluent.metadata.service<type=(.+), (.+)=(.+), (.+)=(.+)><>(.+):'
+        name: $1
+        type: GAUGE
+        cache: true
+        labels:
+          "$2": "$3"
+          "$4": "$5"
+          attribute_name: "$6"
+      - pattern: confluent.(.+)<type=(.+), (.+)=(.+)><>Value
+        name: confluent_$1_$2
+        type: GAUGE
+        cache: true
+        labels:
+          "$3": "$4"
+      - pattern: 'confluent.(.+)<type=(.+), (.+)=(.+)><>(.+):'
+        name: confluent_$1_$2
+        type: GAUGE
+        cache: true
+        labels:
+          "$3": "$4"
+          attribute_name: "$5"
+      - pattern : 'kafka.server<type=(Produce|Fetch|Request), user=(.+), client-id=(.+)><>(.+):'
+        name: kafka_server_$1_$4
+        type: GAUGE
+        cache: true
+        labels:
+          user: "$2"
+          client-id: "$3"
+      - pattern : 'kafka.server<type=(Produce|Fetch|Request), user=(.+)><>(.+):'
+        name: kafka_server_$1_$3
+        type: GAUGE
+        cache: true
+        labels:
+          user: "$2"
+      - pattern : 'kafka.server<type=(Produce|Fetch|Request), client-id=(.+)><>(.+):'
+        name: kafka_server_$1_$3
+        type: GAUGE
+        cache: true
+        labels:
+          client-id: "$2"
+      - pattern : 'kafka.server<type=BrokerTopicMetrics, name=(MessagesInPerSec|BytesInPerSec|BytesOutPerSec|TotalProduceRequestsPerSec|TotalFetchRequestsPerSec), topic=(.+)><>(Count|OneMinuteRate|FiveMinuteRate|FifteenMinuteRate)'
+        name: kafka_server_brokertopicmetrics_$1_$3
+        type: GAUGE
+        cache: true
+        labels:
+          topic: "$2"
+      - pattern : 'kafka.server<type=BrokerTopicMetrics, name=(MessagesInPerSec|BytesInPerSec|BytesOutPerSec)><>(Count|OneMinuteRate|FiveMinuteRate|FifteenMinuteRate)'
+        name: kafka_server_brokertopicmetrics_$1_$2_alltopics
+        type: GAUGE
+      - pattern : 'kafka.network<type=RequestMetrics, name=RequestsPerSec, request=(.+), version=([0-9]+)><>(Count|OneMinuteRate|FiveMinuteRate|FifteenMinuteRate)'
+        name: kafka_network_requestmetrics_requestspersec_$3
+        type: GAUGE
+        cache: true
+        labels:
+          request: "$1"
+      - pattern: kafka.server<type=raft-metrics><>(.+):(.*)
+        name: kafka_server_raft_metrics_$1
+        type: GAUGE
+        cache: true
+      - pattern: kafka.server<type=transaction-coordinator-metrics><>(.+):(.*)
+        name: kafka_server_transaction_coordinator_metrics_$1
+        type: GAUGE
+        cache: true
+      - pattern: kafka.server.link<type=ClusterLinkFetcherManager, name=(.+), (.+)=(.+), (.+)=(.+)><>Value
+        name: kafka_server_link_clusterlinkfetchermanager_$1
+        type: GAUGE
+        cache: true
+        labels:
+          "$2": "$3"
+          "$4": "$5"
+      - pattern: 'kafka.server<type=cluster-link-fetcher-metrics, (.+)=(.+), (.+)=(.+), (.+)=(.+), (.+)=(.+)><>(.+):'
+        name: kafka_server_cluster_link_fetcher_metrics_$9
+        type: GAUGE
+        labels:
+          "$1": "$2"
+          "$3": "$4"
+          "$5": "$6"
+          "$7": "$8"
+      - pattern: 'kafka.server<type=cluster-link-fetcher-metrics, (.+)=(.+), (.+)=(.+), (.+)=(.+)><>(.+):'
+        name: kafka_server_cluster_link_fetcher_metrics_$7
+        type: GAUGE
+        cache: true
+        labels:
+          "$1": "$2"
+          "$3": "$4"
+          "$5": "$6"
+      - pattern: 'kafka.server<type=cluster-link-metrics, (.+)=(.+), (.+)=(.+), (.+)=(.+)><>(.+):'
+        name: kafka_server_cluster_link_metrics_$7
+        type: GAUGE
+        labels:
+          "$1": "$2"
+          "$3": "$4"
+          "$5": "$6"
+      - pattern: 'kafka.server<type=cluster-link-metrics, (.+)=(.+), (.+)=(.+)><>(.+):'
+        name: kafka_server_cluster_link_metrics_$5
+        type: GAUGE
+        cache: true
+        labels:
+          "$1": "$2"
+          "$3": "$4"
+      - pattern: 'kafka.server<type=cluster-link-metrics, (.+)=(.+)><>(.+):'
+        name: kafka_server_cluster_link_metrics_$3
+        type: GAUGE
+        labels:
+          "$1": "$2"
+      - pattern: 'kafka.server<type=cluster-link-source-metrics, request=(.+), link-id=(.+)><>(.+):(.+)'
+        name: kafka_server_cluster_link_source_metrics_$1_$3
+        value: $4
+        type: GAUGE
+        labels:
+          request: "$1"
+          link-id: "$2"
+      - pattern: 'kafka.tier.tasks.archive<type=TierArchiver, name=(.+)><>(.+):(.+)'
+        name: kafka_tier_tasks_archive_tierarchiver_$1
+        type: GAUGE
+      - pattern: 'kafka.tier.tasks<type=TierTasks, name=(.+)><>(.+):(.+)'
+        name: kafka_tier_tasks_tiertasks_$1
+        type: GAUGE
+      - pattern: 'kafka.server<type=TierFetcher><>(BytesFetchedRate)'
+        name: kafka_server_tierfetcher_bytesfetchedrate
+        type: GAUGE
+      - pattern: 'kafka.server<type=tenant-metrics, member=(.+), topic=(.+), consumer-group=(.+), partition=(.+), client-id=(.+)><>(.+):(.+)'
+        name: kafka_server_tenant_metrics_$6
+        type: GAUGE
+        labels:
+          consumerGroup: "$3"
+          client-id: "$5"
+          topic: "$2"
+          partition: "$4"
+      - pattern: 'kafka.server<type=confluent-audit-metrics><>(.+):(.*)'
+        name: confluent_audit_log_$1
+        type: GAUGE
+
+---
+# Service to expose JMX metrics for Prometheus scraping
+# Prometheus will use this service to discover and scrape all Kafka broker pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-jmx-metrics
+  namespace: confluent
+  labels:
+    app: kafka
+    monitoring: prometheus
+spec:
+  type: ClusterIP
+  clusterIP: None  # Headless service for pod-level scraping
+  ports:
+  - name: jmx-metrics
+    port: 9091
+    targetPort: 9091
+    protocol: TCP
+  selector:
+    app: kafka
+    platform.confluent.io/type: kafka
+  publishNotReadyAddresses: true  # Allow scraping even if pod not fully ready

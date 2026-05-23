@@ -31,6 +31,9 @@ kubeconfig
 *.key
 id_rsa*
 
+# JMX Exporter JAR (downloaded from Maven Central)
+jmx_prometheus_javaagent*.jar
+
 # Python
 __pycache__/
 *.py[cod]
