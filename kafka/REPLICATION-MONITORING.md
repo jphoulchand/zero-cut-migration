@@ -4,6 +4,33 @@
 
 Replication performance is critical for high-throughput Kafka clusters. This guide shows how to monitor and troubleshoot replication bottlenecks.
 
+## Access Methods
+
+### From Jumpbox (Direct Access - Recommended)
+
+The jumpbox has VPC peering to EKS, so you can access Jolokia directly:
+
+```bash
+# Access any Kafka broker directly via pod DNS
+BROKER="kafka-0.kafka.confluent.svc.cluster.local:7777"
+
+# Or use pod IP
+BROKER="10.19.3.111:7777"
+
+# Test connection
+curl -s http://$BROKER/jolokia/version | jq .
+```
+
+### From Local Machine (Port-Forward)
+
+```bash
+# Port-forward from local machine
+kubectl port-forward -n confluent kafka-0 7777:7777 &
+BROKER="localhost:7777"
+```
+
+**All examples below use `$BROKER` variable - set it based on your access method.**
+
 ## Key Replication Metrics
 
 ### 1. Replication Lag (Most Important)
@@ -11,10 +38,12 @@ Replication performance is critical for high-throughput Kafka clusters. This gui
 **MaxLag** - How far behind followers are from the leader:
 
 ```bash
-# Check max lag across all partitions (should be close to 0)
-kubectl port-forward -n confluent kafka-0 7777:7777 &
+# From jumpbox - direct access
+curl -s http://kafka-0.kafka.confluent.svc.cluster.local:7777/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=Replica | jq .value.Value
 
-curl -s http://localhost:7777/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=Replica | jq .value.Value
+# Or with variable
+BROKER="kafka-0.kafka.confluent.svc.cluster.local:7777"
+curl -s http://$BROKER/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=Replica | jq .value.Value
 ```
 
 **Expected:** 0-10 messages (good), >1000 (investigate)
@@ -22,11 +51,14 @@ curl -s http://localhost:7777/jolokia/read/kafka.server:type=ReplicaFetcherManag
 ### 2. Replication Bytes In/Out Per Second
 
 ```bash
+# Set broker (from jumpbox)
+BROKER="kafka-0.kafka.confluent.svc.cluster.local:7777"
+
 # Replication bytes in (data being replicated TO this broker)
-curl -s http://localhost:7777/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesInPerSec | jq .value.OneMinuteRate
+curl -s http://$BROKER/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesInPerSec | jq .value.OneMinuteRate
 
 # Replication bytes out (data being replicated FROM this broker)
-curl -s http://localhost:7777/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesOutPerSec | jq .value.OneMinuteRate
+curl -s http://$BROKER/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesOutPerSec | jq .value.OneMinuteRate
 ```
 
 **What to look for:**
@@ -38,10 +70,10 @@ curl -s http://localhost:7777/jolokia/read/kafka.server:type=BrokerTopicMetrics,
 
 ```bash
 # ISR shrinks (bad - replicas falling behind)
-curl -s http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,name=IsrShrinksPerSec | jq .value.OneMinuteRate
+curl -s http://$BROKER/jolokia/read/kafka.server:type=ReplicaManager,name=IsrShrinksPerSec | jq .value.OneMinuteRate
 
 # ISR expands (recovery after shrink)
-curl -s http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,name=IsrExpandsPerSec | jq .value.OneMinuteRate
+curl -s http://$BROKER/jolokia/read/kafka.server:type=ReplicaManager,name=IsrExpandsPerSec | jq .value.OneMinuteRate
 ```
 
 **Expected:** Both should be 0 in steady state
@@ -51,20 +83,20 @@ curl -s http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,name
 
 ```bash
 # Fetch request rate from followers
-curl -s http://localhost:7777/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=RequestsPerSec,clientId=Replica | jq .value.OneMinuteRate
+curl -s http://$BROKER/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=RequestsPerSec,clientId=Replica | jq .value.OneMinuteRate
 
 # Bytes per fetch request
-curl -s http://localhost:7777/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=BytesPerSec,clientId=Replica | jq .value.OneMinuteRate
+curl -s http://$BROKER/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=BytesPerSec,clientId=Replica | jq .value.OneMinuteRate
 ```
 
 ### 5. Network Request Queue Time
 
 ```bash
 # Request queue time for Fetch requests (from followers)
-curl -s "http://localhost:7777/jolokia/read/kafka.network:type=RequestMetrics,name=RequestQueueTimeMs,request=Fetch" | jq .value.Mean
+curl -s "http://$BROKER/jolokia/read/kafka.network:type=RequestMetrics,name=RequestQueueTimeMs,request=Fetch" | jq .value.Mean
 
 # Total time for Fetch requests
-curl -s "http://localhost:7777/jolokia/read/kafka.network:type=RequestMetrics,name=TotalTimeMs,request=Fetch" | jq .value.Mean
+curl -s "http://$BROKER/jolokia/read/kafka.network:type=RequestMetrics,name=TotalTimeMs,request=Fetch" | jq .value.Mean
 ```
 
 **Expected:** <50ms request queue time
@@ -76,7 +108,8 @@ curl -s "http://localhost:7777/jolokia/read/kafka.network:type=RequestMetrics,na
 #!/bin/bash
 # replication-health.sh
 
-BROKER=${1:-localhost:7777}
+# Default to jumpbox direct access (change if using port-forward)
+BROKER=${1:-kafka-0.kafka.confluent.svc.cluster.local:7777}
 
 echo "=== Kafka Replication Performance Check ==="
 echo "Broker: $BROKER"
@@ -126,14 +159,15 @@ fi
 ## Per-Topic Replication Metrics
 
 ```bash
-# Check replication lag for specific topic
+# Set broker and topic
+BROKER="kafka-0.kafka.confluent.svc.cluster.local:7777"
 TOPIC="partition5-rf5"
 
 # Replication bytes in for this topic
-curl -s "http://localhost:7777/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesInPerSec,topic=$TOPIC" | jq .value.OneMinuteRate
+curl -s "http://$BROKER/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesInPerSec,topic=$TOPIC" | jq .value.OneMinuteRate
 
 # Producer bytes in for comparison
-curl -s "http://localhost:7777/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=BytesInPerSec,topic=$TOPIC" | jq .value.OneMinuteRate
+curl -s "http://$BROKER/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=BytesInPerSec,topic=$TOPIC" | jq .value.OneMinuteRate
 ```
 
 ## Monitoring During Performance Test
@@ -142,46 +176,70 @@ Run this while your producer perf test is running:
 
 ```bash
 #!/bin/bash
-# watch-replication.sh
+# watch-replication.sh - Run from jumpbox
+
+# Default to direct access from jumpbox
+BROKER=${1:-kafka-0.kafka.confluent.svc.cluster.local:7777}
+TOPIC=${2:-partition5-rf5}
 
 echo "Topic,Timestamp,ProducerMBps,ReplicationMBps,MaxLag,ISRShrinks,FetchTimeMs"
+echo "# Monitoring broker: $BROKER, topic: $TOPIC" >&2
 
 while true; do
   TIMESTAMP=$(date +%s)
   
   # Producer throughput
-  BYTES_IN=$(curl -s "http://localhost:7777/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=BytesInPerSec,topic=partition5-rf5" | jq -r '.value.OneMinuteRate // 0')
+  BYTES_IN=$(curl -s "http://$BROKER/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=BytesInPerSec,topic=$TOPIC" | jq -r '.value.OneMinuteRate // 0')
   PRODUCER_MBPS=$(echo "scale=2; $BYTES_IN / 1024 / 1024" | bc)
   
   # Replication throughput
-  REP_BYTES=$(curl -s "http://localhost:7777/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesInPerSec,topic=partition5-rf5" | jq -r '.value.OneMinuteRate // 0')
+  REP_BYTES=$(curl -s "http://$BROKER/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesInPerSec,topic=$TOPIC" | jq -r '.value.OneMinuteRate // 0')
   REP_MBPS=$(echo "scale=2; $REP_BYTES / 1024 / 1024" | bc)
   
   # Max lag
-  MAX_LAG=$(curl -s "http://localhost:7777/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=Replica" | jq -r '.value.Value // 0')
+  MAX_LAG=$(curl -s "http://$BROKER/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=Replica" | jq -r '.value.Value // 0')
   
   # ISR shrinks
-  ISR_SHRINKS=$(curl -s "http://localhost:7777/jolokia/read/kafka.server:type=ReplicaManager,name=IsrShrinksPerSec" | jq -r '.value.OneMinuteRate // 0')
+  ISR_SHRINKS=$(curl -s "http://$BROKER/jolokia/read/kafka.server:type=ReplicaManager,name=IsrShrinksPerSec" | jq -r '.value.OneMinuteRate // 0')
   
   # Fetch time
-  FETCH_TIME=$(curl -s "http://localhost:7777/jolokia/read/kafka.network:type=RequestMetrics,name=TotalTimeMs,request=Fetch" | jq -r '.value.Mean // 0')
+  FETCH_TIME=$(curl -s "http://$BROKER/jolokia/read/kafka.network:type=RequestMetrics,name=TotalTimeMs,request=Fetch" | jq -r '.value.Mean // 0')
   
-  echo "partition5-rf5,$TIMESTAMP,$PRODUCER_MBPS,$REP_MBPS,$MAX_LAG,$ISR_SHRINKS,$FETCH_TIME"
+  echo "$TOPIC,$TIMESTAMP,$PRODUCER_MBPS,$REP_MBPS,$MAX_LAG,$ISR_SHRINKS,$FETCH_TIME"
   
   sleep 5
 done
 ```
 
-Usage:
+Usage from jumpbox:
 ```bash
-# Start monitoring
-./watch-replication.sh > replication-metrics.csv
+# Start monitoring (saves to CSV)
+./watch-replication.sh kafka-0.kafka.confluent.svc.cluster.local:7777 partition5-rf5 > replication-metrics.csv &
+MONITOR_PID=$!
 
-# In another terminal, run your perf test
-kafka-producer-perf-test --topic partition5-rf5 ...
+# Run your perf test in same terminal
+kafka-producer-perf-test --topic partition5-rf5 \
+  --num-records 5000000 \
+  --throughput -1 \
+  --record-size 500 \
+  --producer-props bootstrap.servers=kafka.confluent.svc.cluster.local:9092 \
+    acks=all \
+    linger.ms=10
 
-# Stop monitoring (Ctrl+C)
+# Stop monitoring
+kill $MONITOR_PID
+
 # Analyze the CSV
+column -t -s, replication-metrics.csv | less
+```
+
+Usage from local machine (with port-forward):
+```bash
+# In terminal 1: Port-forward
+kubectl port-forward -n confluent kafka-0 7777:7777
+
+# In terminal 2: Monitor
+./watch-replication.sh localhost:7777 partition5-rf5 > replication-metrics.csv
 ```
 
 ## Common Replication Bottlenecks
@@ -302,18 +360,49 @@ Based on your test results:
 3. Disk I/O saturation
 4. t4g.medium instance limits (check instance type)
 
+## Quick Start from Jumpbox
+
+```bash
+# 1. Create health check script
+cat > ~/replication-health.sh <<'EOF'
+#!/bin/bash
+BROKER=${1:-kafka-0.kafka.confluent.svc.cluster.local:7777}
+echo "=== Kafka Replication Performance Check ==="
+echo "Broker: $BROKER"
+echo
+MAX_LAG=$(curl -s "http://$BROKER/jolokia/read/kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=Replica" | jq -r '.value.Value // 0')
+echo "Max Replication Lag: $MAX_LAG messages"
+URP=$(curl -s "http://$BROKER/jolokia/read/kafka.server:type=ReplicaManager,name=UnderReplicatedPartitions" | jq -r '.value.Value')
+echo "Under-Replicated Partitions: $URP"
+REP_BYTES_IN=$(curl -s "http://$BROKER/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesInPerSec" | jq -r '.value.OneMinuteRate')
+echo "Replication Bytes In/sec: $(echo "scale=2; $REP_BYTES_IN / 1024 / 1024" | bc) MB/s"
+EOF
+chmod +x ~/replication-health.sh
+
+# 2. Run quick health check
+~/replication-health.sh
+
+# 3. Monitor specific topic during test
+TOPIC="partition5-rf5"
+curl -s "http://kafka-0.kafka.confluent.svc.cluster.local:7777/jolokia/read/kafka.server:type=BrokerTopicMetrics,name=ReplicationBytesInPerSec,topic=$TOPIC" | jq '{
+  topic: "'$TOPIC'",
+  replication_mbps: (.value.OneMinuteRate / 1024 / 1024),
+  one_min_rate: .value.OneMinuteRate
+}'
+```
+
 ## Next Steps
 
-1. **Run monitoring during test:**
+1. **Run monitoring during test (from jumpbox):**
    ```bash
-   kubectl port-forward -n confluent kafka-0 7777:7777 &
-   ./watch-replication.sh > metrics.csv &
+   ./watch-replication.sh kafka-0.kafka.confluent.svc.cluster.local:7777 partition5-rf5 > metrics.csv &
    kafka-producer-perf-test ...
+   kill %1  # Stop monitoring
    ```
 
 2. **Check for bottlenecks:**
    ```bash
-   ./replication-health.sh localhost:7777
+   ./replication-health.sh kafka-0.kafka.confluent.svc.cluster.local:7777
    ```
 
 3. **Tune configuration** if needed (see above)
