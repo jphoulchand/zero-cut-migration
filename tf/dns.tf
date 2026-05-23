@@ -92,9 +92,9 @@ data "aws_instances" "system_nodes" {
 
 # Get private IPs of system nodes
 data "aws_instance" "system_nodes" {
-  count = length(data.aws_instances.system_nodes.ids)
+  for_each = toset(data.aws_instances.system_nodes.ids)
 
-  instance_id = data.aws_instances.system_nodes.ids[count.index]
+  instance_id = each.value
 }
 
 # -----------------------------------------------------------------------------
