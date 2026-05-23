@@ -62,6 +62,7 @@ kafka/certs/generated-certs/
 *.tmp
 *.bak
 *.backup
+backup
 
 # Environment files
 .env
