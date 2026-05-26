@@ -15,6 +15,7 @@ terraform.rc
 
 # Terraform plans
 *.tfplan
+tfplan
 
 # Kubernetes
 kubeconfig
@@ -51,6 +52,9 @@ ENV/
 *.swp
 *.swo
 *~
+
+# Claude Code
+.claude/
 
 # Certificates (auto-generated)
 kafka/certs/generated-certs/
