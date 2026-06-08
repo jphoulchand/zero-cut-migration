@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 64px; font-weight: 700; fill: #000000; }
+      .step-box { font-family: Arial, sans-serif; font-size: 32px; font-weight: 600; fill: #FFFFFF; }
+      .step-label { font-family: Arial, sans-serif; font-size: 24px; font-weight: 400; fill: #44546A; }
+      .link { font-family: Arial, sans-serif; font-size: 18px; font-weight: 400; fill: #0563C1; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <!-- Content Area -->
+  <g transform="translate(80, 60)">
+
+    <!-- Title -->
+    <text x="0" y="80" class="title">The control plane is simple</text>
+
+    <!-- 3-Step Process Diagram -->
+    <g transform="translate(100, 250)">
+
+      <!-- Step 1: init validates -->
+      <g>
+        <circle cx="100" cy="60" r="60" fill="#4472C4"/>
+        <text x="100" y="75" class="step-box" text-anchor="middle">1</text>
+        <text x="100" y="160" class="step-label" text-anchor="middle" font-weight="700">Validate</text>
+        <text x="100" y="195" class="step-label" text-anchor="middle">init validates</text>
+      </g>
+
+      <!-- Arrow -->
+      <path d="M 180 60 L 420 60" stroke="#4472C4" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
+
+      <!-- Step 2: lag-check decides window -->
+      <g transform="translate(400, 0)">
+        <circle cx="100" cy="60" r="60" fill="#ED7D31"/>
+        <text x="100" y="75" class="step-box" text-anchor="middle">2</text>
+        <text x="100" y="160" class="step-label" text-anchor="middle" font-weight="700">Observe</text>
+        <text x="100" y="195" class="step-label" text-anchor="middle">lag-check decides window</text>
+      </g>
+
+      <!-- Arrow -->
+      <path d="M 580 60 L 820 60" stroke="#4472C4" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
+
+      <!-- Step 3: execute cuts over -->
+      <g transform="translate(800, 0)">
+        <circle cx="100" cy="60" r="60" fill="#70AD47"/>
+        <text x="100" y="75" class="step-box" text-anchor="middle">3</text>
+        <text x="100" y="160" class="step-label" text-anchor="middle" font-weight="700">Switch</text>
+        <text x="100" y="195" class="step-label" text-anchor="middle">execute cuts over</text>
+      </g>
+
+    </g>
+
+    <!-- Links Section -->
+    <g transform="translate(0, 550)">
+      <a href="https://github.com/confluentinc/kcp/tree/main/docs#kcp-migration" target="_blank">
+        <text x="0" y="0" class="link" style="cursor: pointer; text-decoration: underline;">Commands: github.com/confluentinc/kcp/tree/main/docs#kcp-migration</text>
+      </a>
+    </g>
+
+  </g>
+
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#4472C4"/>
+    </marker>
+  </defs>
+
+  <!-- Confluent Logo -->
+  <image x="1750" y="990" width="80" height="80" href="../confluent-logo-official.svg"/>
+
+</svg>

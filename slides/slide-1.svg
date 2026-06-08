@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 64px; font-weight: 700; fill: #000000; }
+      .bullet { font-family: Arial, sans-serif; font-size: 28px; font-weight: 400; fill: #44546A; }
+      .caption { font-family: Arial, sans-serif; font-size: 20px; font-weight: 400; fill: #5B9BD5; }
+      .link { font-family: Arial, sans-serif; font-size: 18px; font-weight: 400; fill: #0563C1; }
+      .label { font-family: Arial, sans-serif; font-size: 22px; font-weight: 600; fill: #44546A; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <!-- Content Area -->
+  <g transform="translate(80, 60)">
+
+    <!-- Title -->
+    <text x="0" y="80" class="title">Zero-cut removes the client cutover problem</text>
+
+    <!-- Bullet Points -->
+    <g transform="translate(0, 180)">
+      <circle cx="10" cy="-5" r="8" fill="#4472C4"/>
+      <text x="40" y="0" class="bullet">One bootstrap change</text>
+    </g>
+
+    <g transform="translate(0, 240)">
+      <circle cx="10" cy="-5" r="8" fill="#4472C4"/>
+      <text x="40" y="0" class="bullet">No restart at cutover</text>
+    </g>
+
+    <g transform="translate(0, 300)">
+      <circle cx="10" cy="-5" r="8" fill="#4472C4"/>
+      <text x="40" y="0" class="bullet">Operator-triggered migration</text>
+    </g>
+
+    <!-- Architecture Diagram -->
+    <g transform="translate(0, 400)">
+      <!-- Clients Box -->
+      <rect x="0" y="0" width="400" height="100" fill="#E7E6E6" stroke="#44546A" stroke-width="2" rx="8"/>
+      <text x="200" y="55" class="label" text-anchor="middle">Clients</text>
+
+      <!-- Arrow 1 -->
+      <path d="M 420 50 L 520 50" stroke="#4472C4" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
+
+      <!-- Gateway Box -->
+      <rect x="540" y="0" width="400" height="100" fill="#5B9BD5" stroke="#44546A" stroke-width="2" rx="8"/>
+      <text x="740" y="55" class="label" text-anchor="middle" fill="#FFFFFF">Gateway</text>
+
+      <!-- Arrow 2 -->
+      <path d="M 960 50 L 1060 50" stroke="#4472C4" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
+
+      <!-- Source/Destination Box -->
+      <rect x="1080" y="0" width="480" height="100" fill="#E7E6E6" stroke="#44546A" stroke-width="2" rx="8"/>
+      <text x="1320" y="55" class="label" text-anchor="middle">Source / Destination</text>
+    </g>
+
+    <!-- Caption -->
+    <text x="0" y="560" class="caption">Gateway decouples clients from cluster identity</text>
+
+    <!-- Links Section -->
+    <g transform="translate(0, 640)">
+      <a href="https://www.confluent.io/blog/client-migration-kcp-gateway/" target="_blank">
+        <text x="0" y="0" class="link" style="cursor: pointer; text-decoration: underline;">Blog: confluent.io/blog/client-migration-kcp-gateway</text>
+      </a>
+      <a href="https://github.com/confluentinc/kcp/blob/main/docs/assets/getting-started-with-zero-cut-migrations.md" target="_blank">
+        <text x="0" y="35" class="link" style="cursor: pointer; text-decoration: underline;">Guide: github.com/confluentinc/kcp/.../getting-started-with-zero-cut-migrations.md</text>
+      </a>
+    </g>
+
+  </g>
+
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#4472C4"/>
+    </marker>
+  </defs>
+
+  <!-- Confluent Logo -->
+  <image x="1750" y="990" width="80" height="80" href="../confluent-logo-official.svg"/>
+
+</svg>

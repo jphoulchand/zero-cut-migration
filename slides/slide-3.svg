@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 64px; font-weight: 700; fill: #000000; }
+      .bullet { font-family: Arial, sans-serif; font-size: 28px; font-weight: 400; fill: #44546A; }
+      .link { font-family: Arial, sans-serif; font-size: 18px; font-weight: 400; fill: #0563C1; }
+      .label { font-family: Arial, sans-serif; font-size: 22px; font-weight: 600; fill: #000000; }
+      .status { font-family: Arial, sans-serif; font-size: 20px; font-weight: 400; fill: #FFFFFF; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <!-- Content Area -->
+  <g transform="translate(80, 60)">
+
+    <!-- Title -->
+    <text x="0" y="80" class="title">GA model = group-based migration</text>
+
+    <!-- Bullet Points -->
+    <g transform="translate(0, 180)">
+      <circle cx="10" cy="-5" r="8" fill="#4472C4"/>
+      <text x="40" y="0" class="bullet">Group = topics + dependent clients</text>
+    </g>
+
+    <g transform="translate(0, 240)">
+      <circle cx="10" cy="-5" r="8" fill="#4472C4"/>
+      <text x="40" y="0" class="bullet">One route per group</text>
+    </g>
+
+    <g transform="translate(0, 300)">
+      <circle cx="10" cy="-5" r="8" fill="#4472C4"/>
+      <text x="40" y="0" class="bullet">Lower blast radius</text>
+    </g>
+
+    <!-- Migration Groups Diagram - 3 Lanes -->
+    <g transform="translate(0, 400)">
+
+      <!-- Group A - Migrated (Green) -->
+      <rect x="0" y="0" width="500" height="80" fill="#70AD47" stroke="#44546A" stroke-width="2" rx="8"/>
+      <text x="20" y="35" class="label" fill="#FFFFFF">Group A</text>
+      <text x="20" y="60" class="status">✓ Migrated</text>
+
+      <!-- Group B - In Progress (Orange) -->
+      <rect x="540" y="0" width="500" height="80" fill="#ED7D31" stroke="#44546A" stroke-width="2" rx="8"/>
+      <text x="560" y="35" class="label" fill="#FFFFFF">Group B</text>
+      <text x="560" y="60" class="status">⟳ In progress</text>
+
+      <!-- Group C - Pending (Gray) -->
+      <rect x="1080" y="0" width="500" height="80" fill="#A5A5A5" stroke="#44546A" stroke-width="2" rx="8"/>
+      <text x="1100" y="35" class="label" fill="#FFFFFF">Group C</text>
+      <text x="1100" y="60" class="status">○ Pending</text>
+
+    </g>
+
+    <!-- Links Section -->
+    <g transform="translate(0, 560)">
+      <a href="https://drive.google.com/file/d/1PGdHlRf2z2YuRToHhNHRapyo3cx8w2zb" target="_blank">
+        <text x="0" y="0" class="link" style="cursor: pointer; text-decoration: underline;">Brief: drive.google.com/file/d/1PGdHlRf2z2YuRToHhNHRapyo3cx8w2zb</text>
+      </a>
+      <a href="https://www.confluent.io/blog/client-migration-kcp-gateway/" target="_blank">
+        <text x="0" y="35" class="link" style="cursor: pointer; text-decoration: underline;">Blog: confluent.io/blog/client-migration-kcp-gateway</text>
+      </a>
+    </g>
+
+  </g>
+
+  <!-- Confluent Logo -->
+  <image x="1750" y="990" width="80" height="80" href="../confluent-logo-official.svg"/>
+
+</svg>

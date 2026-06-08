@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 64px; font-weight: 700; fill: #000000; }
+      .bullet { font-family: Arial, sans-serif; font-size: 28px; font-weight: 400; fill: #44546A; }
+      .link { font-family: Arial, sans-serif; font-size: 18px; font-weight: 400; fill: #0563C1; }
+      .card-title { font-family: Arial, sans-serif; font-size: 28px; font-weight: 700; fill: #000000; }
+      .card-text { font-family: Arial, sans-serif; font-size: 20px; font-weight: 400; fill: #44546A; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <!-- Content Area -->
+  <g transform="translate(80, 60)">
+
+    <!-- Title -->
+    <text x="0" y="80" class="title">Why this matters in the field</text>
+
+    <!-- Bullet Points -->
+    <g transform="translate(0, 180)">
+      <circle cx="10" cy="-5" r="8" fill="#4472C4"/>
+      <text x="40" y="0" class="bullet">Removes cross-team cutover coordination</text>
+    </g>
+
+    <g transform="translate(0, 240)">
+      <circle cx="10" cy="-5" r="8" fill="#4472C4"/>
+      <text x="40" y="0" class="bullet">Preserves consumer continuity via offset sync</text>
+    </g>
+
+    <g transform="translate(0, 300)">
+      <circle cx="10" cy="-5" r="8" fill="#4472C4"/>
+      <text x="40" y="0" class="bullet">Auth swap reduces client-side changes</text>
+    </g>
+
+    <!-- 3 Icon Cards -->
+    <g transform="translate(50, 400)">
+
+      <!-- Card 1: Coordination -->
+      <g>
+        <rect x="0" y="0" width="400" height="180" fill="#4472C4" rx="12"/>
+        <circle cx="200" cy="60" r="30" fill="#FFFFFF"/>
+        <text x="200" y="68" style="font-family: Arial, sans-serif; font-size: 32px; fill: #4472C4;" text-anchor="middle">⟳</text>
+        <text x="200" y="130" class="card-title" text-anchor="middle" fill="#FFFFFF">Coordination</text>
+        <text x="200" y="160" class="card-text" text-anchor="middle" fill="#E7E6E6">Cross-team sync</text>
+      </g>
+
+      <!-- Card 2: Offsets -->
+      <g transform="translate(470, 0)">
+        <rect x="0" y="0" width="400" height="180" fill="#ED7D31" rx="12"/>
+        <circle cx="200" cy="60" r="30" fill="#FFFFFF"/>
+        <text x="200" y="68" style="font-family: Arial, sans-serif; font-size: 32px; fill: #ED7D31;" text-anchor="middle">↔</text>
+        <text x="200" y="130" class="card-title" text-anchor="middle" fill="#FFFFFF">Offsets</text>
+        <text x="200" y="160" class="card-text" text-anchor="middle" fill="#E7E6E6">Consumer continuity</text>
+      </g>
+
+      <!-- Card 3: Auth -->
+      <g transform="translate(940, 0)">
+        <rect x="0" y="0" width="400" height="180" fill="#70AD47" rx="12"/>
+        <circle cx="200" cy="60" r="30" fill="#FFFFFF"/>
+        <text x="200" y="68" style="font-family: Arial, sans-serif; font-size: 32px; fill: #70AD47;" text-anchor="middle">🔐</text>
+        <text x="200" y="130" class="card-title" text-anchor="middle" fill="#FFFFFF">Auth</text>
+        <text x="200" y="160" class="card-text" text-anchor="middle" fill="#E7E6E6">Minimal client changes</text>
+      </g>
+
+    </g>
+
+    <!-- Links Section -->
+    <g transform="translate(0, 650)">
+      <a href="https://docs.confluent.io/cloud/current/cp-component/gateway/overview.html" target="_blank">
+        <text x="0" y="0" class="link" style="cursor: pointer; text-decoration: underline;">Gateway overview: docs.confluent.io/cloud/current/cp-component/gateway/overview.html</text>
+      </a>
+      <a href="https://docs.confluent.io/cloud/current/multi-cloud/cluster-linking/index.html" target="_blank">
+        <text x="0" y="35" class="link" style="cursor: pointer; text-decoration: underline;">Cluster Linking: docs.confluent.io/cloud/current/multi-cloud/cluster-linking/index.html</text>
+      </a>
+    </g>
+
+  </g>
+
+  <!-- Confluent Logo -->
+  <image x="1750" y="990" width="80" height="80" href="../confluent-logo-official.svg"/>
+
+</svg>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 64px; font-weight: 700; fill: #000000; }
+      .column-header { font-family: Arial, sans-serif; font-size: 36px; font-weight: 700; fill: #4472C4; }
+      .bullet { font-family: Arial, sans-serif; font-size: 24px; font-weight: 400; fill: #44546A; }
+      .link { font-family: Arial, sans-serif; font-size: 18px; font-weight: 400; fill: #0563C1; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+
+  <!-- Content Area -->
+  <g transform="translate(80, 60)">
+
+    <!-- Title -->
+    <text x="0" y="80" class="title">Position precisely</text>
+
+    <!-- Two Column Layout -->
+    <g transform="translate(0, 160)">
+
+      <!-- Left Column: Fit Criteria -->
+      <g>
+        <text x="0" y="40" class="column-header">Best for</text>
+
+        <g transform="translate(0, 100)">
+          <circle cx="10" cy="-5" r="6" fill="#4472C4"/>
+          <text x="30" y="0" class="bullet">Large, high-coordination</text>
+          <text x="30" y="35" class="bullet">migrations</text>
+        </g>
+
+        <g transform="translate(0, 190)">
+          <circle cx="10" cy="-5" r="6" fill="#4472C4"/>
+          <text x="30" y="0" class="bullet">Minimal client-side</text>
+          <text x="30" y="35" class="bullet">changes needed</text>
+        </g>
+
+        <g transform="translate(0, 280)">
+          <circle cx="10" cy="-5" r="6" fill="#4472C4"/>
+          <text x="30" y="0" class="bullet">Offset preservation</text>
+          <text x="30" y="35" class="bullet">critical</text>
+        </g>
+      </g>
+
+      <!-- Divider Line -->
+      <line x1="780" y1="0" x2="780" y2="450" stroke="#E7E6E6" stroke-width="2"/>
+
+      <!-- Right Column: Prerequisites / Caveats -->
+      <g transform="translate(840, 0)">
+        <text x="0" y="40" class="column-header">Prerequisites &amp; Caveats</text>
+
+        <g transform="translate(0, 100)">
+          <circle cx="10" cy="-5" r="6" fill="#ED7D31"/>
+          <text x="30" y="0" class="bullet">Requires Gateway +</text>
+          <text x="30" y="35" class="bullet">Cluster Linking</text>
+        </g>
+
+        <g transform="translate(0, 190)">
+          <circle cx="10" cy="-5" r="6" fill="#ED7D31"/>
+          <text x="30" y="0" class="bullet">Offset sync must be</text>
+          <text x="30" y="35" class="bullet">configured</text>
+        </g>
+
+        <g transform="translate(0, 280)">
+          <circle cx="10" cy="-5" r="6" fill="#ED7D31"/>
+          <text x="30" y="0" class="bullet">AWS IAM auth not</text>
+          <text x="30" y="35" class="bullet">supported</text>
+        </g>
+      </g>
+
+    </g>
+
+    <!-- Links Section -->
+    <g transform="translate(0, 700)">
+      <a href="https://docs.confluent.io/cloud/current/cp-component/gateway/gateway-security.html" target="_blank">
+        <text x="0" y="0" class="link" style="cursor: pointer; text-decoration: underline;">Auth/security: docs.confluent.io/cloud/current/cp-component/gateway/gateway-security.html</text>
+      </a>
+      <a href="https://docs.confluent.io/cloud/current/multi-cloud/cluster-linking/private-networking.html" target="_blank">
+        <text x="0" y="35" class="link" style="cursor: pointer; text-decoration: underline;">Private networking: docs.confluent.io/cloud/.../cluster-linking/private-networking.html</text>
+      </a>
+    </g>
+
+  </g>
+
+  <!-- Confluent Logo -->
+  <image x="1750" y="990" width="80" height="80" href="../confluent-logo-official.svg"/>
+
+</svg>
