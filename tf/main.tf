@@ -206,7 +206,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     system_nodes = {
-      name         = "${var.project_name}-system-v3"
+      name         = "${var.project_name}-system-v4"
       min_size     = 1
       max_size     = 2
       desired_size = 1

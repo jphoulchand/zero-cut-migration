@@ -134,7 +134,60 @@ resource "aws_security_group" "jump_box_sg" {
 }
 
 
-# --- 4. JUMP BOX EC2 INSTANCE ---
+# --- 4. IAM ROLE FOR JUMP BOX ---
+
+# IAM role for jumpbox EC2 instance
+resource "aws_iam_role" "jump_box_role" {
+  name = "${local.base_name}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.base_name}-role"
+  })
+}
+
+# IAM policy for EKS cluster access
+resource "aws_iam_role_policy" "jump_box_eks_policy" {
+  name = "${local.base_name}-eks-policy"
+  role = aws_iam_role.jump_box_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "eks:DescribeCluster",
+          "eks:ListClusters"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Instance profile for jumpbox
+resource "aws_iam_instance_profile" "jump_box_profile" {
+  name = "${local.base_name}-profile"
+  role = aws_iam_role.jump_box_role.name
+
+  tags = merge(local.common_tags, {
+    Name = "${local.base_name}-profile"
+  })
+}
+
+
+# --- 5. JUMP BOX EC2 INSTANCE ---
 
 # Find the latest Amazon Linux 2023 AMI
 data "aws_ami" "amazon_linux" {
@@ -158,8 +211,9 @@ data "aws_key_pair" "existing_jump_box_key" {
 }
 
 resource "aws_instance" "jump_box" {
-  ami           = data.aws_ami.amazon_linux.id
-  instance_type = var.instance_type
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = var.instance_type
+  iam_instance_profile   = aws_iam_instance_profile.jump_box_profile.name
   # Launch into the first public subnet
   subnet_id                   = aws_subnet.jump_box_public_subnet_1.id
   vpc_security_group_ids      = [aws_security_group.jump_box_sg.id]
@@ -222,7 +276,7 @@ output "jump_box_setup_commands" {
     EOT
 }
 
-# --- 5. ELASTIC IP (Static Public IP for SSH) ---
+# --- 6. ELASTIC IP (Static Public IP for SSH) ---
 
 resource "aws_eip" "jump_box_eip" {
   tags = merge(local.common_tags, {
@@ -236,7 +290,12 @@ resource "aws_eip_association" "jump_box_eip_assoc" {
 
 }
 
-# --- 6. OUTPUTS ---
+# --- 7. OUTPUTS ---
+
+output "jump_box_role_arn" {
+  description = "The ARN of the Jump Box IAM role (for EKS aws-auth ConfigMap)."
+  value       = aws_iam_role.jump_box_role.arn
+}
 
 output "jump_box_vpc_id" {
   description = "The ID of the newly created Jump Box VPC (for peering)."

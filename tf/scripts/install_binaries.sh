@@ -7,8 +7,8 @@ INSTALL_BASE="/opt/binaries"
 JAVA_URL="https://corretto.aws/downloads/latest/amazon-corretto-21-x64-linux-jdk.tar.gz"
 KAFKA_URL="https://packages.confluent.io/archive/8.2/confluent-8.2.1.tar.gz"
 
-echo installing netcat
-sudo yum install nc bind-utils -y
+echo "--- Installing system dependencies ---"
+sudo yum install -y nc bind-utils unzip git
 
 # Ensure wget is installed (for robust environments)
 if ! command -v wget &> /dev/null; then
@@ -110,6 +110,38 @@ echo "Activating environment variables..."
 source "$BASH_PROFILE"
 
 echo ""
+# --- 5. INSTALL KUBECTL ---
+
+echo -e "\n--- 5. Installing kubectl ---"
+KUBECTL_VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
+echo "Downloading kubectl $KUBECTL_VERSION..."
+curl -sLo /tmp/kubectl "https://storage.googleapis.com/kubernetes-release/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+rm -f /tmp/kubectl
+echo "✓ kubectl installed: $(kubectl version --client 2>&1 | grep 'Client Version')"
+
+
+# --- 6. INSTALL HELM ---
+
+echo -e "\n--- 6. Installing Helm ---"
+curl -s https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+echo "✓ Helm installed: $(helm version --short)"
+
+
+# --- 7. INSTALL AWS CLI v2 ---
+
+echo -e "\n--- 7. Installing AWS CLI v2 ---"
+cd /tmp
+curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip -q awscliv2.zip
+sudo ./aws/install --update 2>/dev/null || sudo ./aws/install
+rm -rf aws awscliv2.zip
+echo "✓ AWS CLI installed: $(aws --version)"
+
+
+# --- 8. FINAL SUMMARY ---
+
+echo ""
 echo "=========================================="
 echo "Installation Complete!"
 echo "=========================================="
@@ -117,6 +149,10 @@ echo ""
 echo "Installed components:"
 echo "  • Java (Corretto 21): $JAVA_ROOT"
 echo "  • Confluent Platform: $KAFKA_ROOT"
+echo "  • kubectl: $(kubectl version --client 2>&1 | grep 'Client Version')"
+echo "  • Helm: $(helm version --short 2>&1)"
+echo "  • AWS CLI: $(aws --version 2>&1)"
+echo "  • Rancher CLI: install separately if needed"
 echo ""
 echo "Verification:"
 echo "  • JAVA_HOME: $JAVA_HOME"
