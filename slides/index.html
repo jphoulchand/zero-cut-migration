@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confluent Zero-Cut Migration Slides</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background-color: #000000;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 3px solid #4472C4;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .slide-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        .slide-wrapper {
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide-wrapper object {
+            max-width: 100%;
+            max-height: calc(100vh - 180px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            pointer-events: auto;
+        }
+
+        .controls {
+            background-color: #000000;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            border-top: 3px solid #4472C4;
+        }
+
+        button {
+            background-color: #4472C4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: #5B9BD5;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .slide-info {
+            font-size: 18px;
+            font-weight: 600;
+            color: #E7E6E6;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .nav-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .keyboard-hint {
+            font-size: 12px;
+            color: #A5A5A5;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .fullscreen-btn {
+            background-color: #70AD47;
+            position: absolute;
+            right: 20px;
+        }
+
+        .fullscreen-btn:hover {
+            background-color: #8BC462;
+        }
+
+        /* Fullscreen mode adjustments */
+        :fullscreen .header,
+        :fullscreen .controls,
+        :fullscreen .keyboard-hint,
+        :-webkit-full-screen .header,
+        :-webkit-full-screen .controls,
+        :-webkit-full-screen .keyboard-hint,
+        :-moz-full-screen .header,
+        :-moz-full-screen .controls,
+        :-moz-full-screen .keyboard-hint {
+            display: none;
+        }
+
+        :fullscreen .slide-container,
+        :-webkit-full-screen .slide-container,
+        :-moz-full-screen .slide-container {
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        :fullscreen .slide-wrapper,
+        :-webkit-full-screen .slide-wrapper,
+        :-moz-full-screen .slide-wrapper {
+            width: 100%;
+            height: 100%;
+        }
+
+        :fullscreen .slide-wrapper object,
+        :-webkit-full-screen .slide-wrapper object,
+        :-moz-full-screen .slide-wrapper object {
+            max-width: 100vw;
+            max-height: 100vh;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            color: #A5A5A5;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Confluent Zero-Cut Migration Slides</h1>
+    </div>
+
+    <div class="slide-container">
+        <div class="slide-wrapper">
+            <object id="currentSlide" type="image/svg+xml" data="">
+                <img src="" alt="Slide">
+            </object>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="prevBtn" class="nav-button" onclick="previousSlide()">
+            ← Previous
+        </button>
+
+        <div class="slide-info">
+            <span id="slideCounter">1 / 5</span>
+        </div>
+
+        <button id="nextBtn" class="nav-button" onclick="nextSlide()">
+            Next →
+        </button>
+
+        <button id="fullscreenBtn" class="nav-button fullscreen-btn" onclick="toggleFullscreen()">
+            ⛶ Fullscreen
+        </button>
+    </div>
+
+    <div class="keyboard-hint">
+        Use arrow keys ← → or click buttons to navigate | Press F for fullscreen
+    </div>
+
+    <script>
+        const slides = [
+            'slide-1.svg',
+            'slide-2.svg',
+            'slide-3.svg',
+            'slide-4.svg',
+            'slide-5.svg'
+        ];
+
+        let currentSlideIndex = 0;
+
+        function updateSlide() {
+            const slideObj = document.getElementById('currentSlide');
+            const counter = document.getElementById('slideCounter');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            // Update slide object
+            slideObj.data = slides[currentSlideIndex];
+
+            // Update counter
+            counter.textContent = `${currentSlideIndex + 1} / ${slides.length}`;
+
+            // Update button states
+            prevBtn.disabled = currentSlideIndex === 0;
+            nextBtn.disabled = currentSlideIndex === slides.length - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlideIndex < slides.length - 1) {
+                currentSlideIndex++;
+                updateSlide();
+            }
+        }
+
+        function previousSlide() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                updateSlide();
+            }
+        }
+
+        // Fullscreen functionality
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement) {
+                // Enter fullscreen
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    elem.mozRequestFullScreen();
+                }
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                }
+            }
+        }
+
+        // Update fullscreen button text
+        document.addEventListener('fullscreenchange', updateFullscreenButton);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+        document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+
+        function updateFullscreenButton() {
+            const btn = document.getElementById('fullscreenBtn');
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement) {
+                btn.innerHTML = '⛶ Exit Fullscreen';
+            } else {
+                btn.innerHTML = '⛶ Fullscreen';
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown' || event.key === ' ') {
+                event.preventDefault();
+                nextSlide();
+            } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                previousSlide();
+            } else if (event.key === 'Home') {
+                event.preventDefault();
+                currentSlideIndex = 0;
+                updateSlide();
+            } else if (event.key === 'End') {
+                event.preventDefault();
+                currentSlideIndex = slides.length - 1;
+                updateSlide();
+            } else if (event.key === 'f' || event.key === 'F') {
+                event.preventDefault();
+                toggleFullscreen();
+            } else if (event.key === 'Escape' && (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement)) {
+                // ESC key exits fullscreen (browser default, but we handle it explicitly)
+                return;
+            }
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            updateSlide();
+        });
+    </script>
+</body>
+</html>
