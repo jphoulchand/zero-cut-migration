@@ -154,7 +154,7 @@ kubectl apply -f kafka-auxiliary.yaml
 
 ```bash
 # SSH to jumpbox
-ssh -i ~/.ssh/jphoulchand_csta.pem ec2-user@<jumpbox-ip>
+ssh -i ~/.ssh/your-key.pem ec2-user@<jumpbox-ip>
 
 # Test DNS resolution
 dig kafka.confluent.svc.cluster.local +short

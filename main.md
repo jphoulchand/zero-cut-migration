@@ -251,8 +251,8 @@ aws ec2 create-route \
 Delete the old one
 ```
 aws eks delete-nodegroup \
-  --cluster-name jph-demo-cluster \
-  --nodegroup-name jph-demo-system-20251215182701639900000001  \
+  --cluster-name demo-cluster \
+  --nodegroup-name demo-system-20251215182701639900000001  \
   --region eu-west-1
 ```
 
@@ -282,9 +282,9 @@ terraform apply
 ```
 
 aws eks create-nodegroup \
-  --cluster-name jph-demo-cluster \
+  --cluster-name demo-cluster \
   --nodegroup-name simple-bootstrap \
-  --node-role arn:aws:iam::995646271469:role/jph-demo-system-v4-eks-node-group-20251215211632535100000001 \
+  --node-role arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/demo-system-v4-eks-node-group-20251215211632535100000001 \
   --subnets subnet-0c994f75695f56a1a \
   --instance-types t3.large \
   --ami-type AL2_x86_64 \

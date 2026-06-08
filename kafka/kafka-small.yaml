@@ -1,9 +1,9 @@
 # =============================================================================
-# Kafka Core: Kafka Brokers + KRaft Controllers with mTLS + Test Topics
+# Kafka Small Cluster: 3 Controllers + 4 Brokers with mTLS
 # Confluent for Kubernetes v3.2.2 (Helm chart 0.1514.40)
 # Confluent Platform 8.2.1
 #
-# Deploy this first to verify core cluster works before adding other components
+# Cost-optimized cluster for development/testing
 #
 # Prerequisites:
 #   1. Confluent operator deployed (helm install confluent-operator)
@@ -14,11 +14,12 @@
 #   - KRaft mode (no ZooKeeper)
 #   - mTLS with auto-generated certificates
 #   - TLS 1.3 only
-#   - 5 KRaft controllers (HA across 3 AZs)
-#   - 12 Kafka brokers (HA across 3 AZs)
+#   - 3 KRaft controllers (minimum for HA)
+#   - 4 Kafka brokers (cost-optimized)
 #   - Default replication factor: 3, Min ISR: 2
 #   - ARM64 spot instances
-#   - Test topic: partition5-rf5 (RF=5, 5 partitions, min ISR=3)
+#
+# Cost: ~$70-90/month (vs $124/month for 12+5 cluster)
 # =============================================================================
 
 ---
@@ -28,7 +29,7 @@ metadata:
   name: kraftcontroller
   namespace: confluent
 spec:
-  replicas: 5
+  replicas: 3
 
   image:
     application: confluentinc/cp-server:8.2.1
@@ -57,7 +58,7 @@ spec:
 
     affinity:
       podAntiAffinity:
-        # Prefer spreading across zones, but allow 2 per zone for 5 replicas / 3 AZs
+        # Spread 3 controllers across 3 AZs (1 per zone)
         preferredDuringSchedulingIgnoredDuringExecution:
         - weight: 100
           podAffinityTerm:
@@ -86,7 +87,7 @@ metadata:
   name: kafka
   namespace: confluent
 spec:
-  replicas: 12
+  replicas: 4
 
   image:
     application: docker.io/confluentinc/cp-server:8.2.1
@@ -120,7 +121,7 @@ spec:
 
     affinity:
       podAntiAffinity:
-        # Prefer spreading across zones, but allow 4 per zone for 12 replicas / 3 AZs
+        # Spread 4 brokers across 3 AZs
         preferredDuringSchedulingIgnoredDuringExecution:
         - weight: 100
           podAffinityTerm:
@@ -182,43 +183,3 @@ spec:
   rackAssignment:
     nodeLabels:
     - topology.kubernetes.io/zone
-
----
-# =============================================================================
-# High-Replication Test Topic
-# =============================================================================
-#
-# Purpose: Testing topic with RF=5 for maximum data durability
-# Use case: Critical data requiring copies across all availability zones
-#
-# Configuration:
-#   - 5 partitions for parallelism
-#   - Replication factor: 5 (copy on every broker subset)
-#   - Min ISR: 3 (requires 3 in-sync replicas for writes)
-#   - 1GB segments for performance
-#
-# Note: With 12 brokers, each partition will have 5 replicas distributed
-#       across different brokers and availability zones for maximum HA
-# =============================================================================
-apiVersion: platform.confluent.io/v1beta1
-kind: KafkaTopic
-metadata:
-  name: partition5-rf5
-  namespace: confluent
-spec:
-  # Reference to the Kafka cluster
-  kafkaClusterRef:
-    name: kafka
-
-  # Topic configuration
-  replicas: 5
-  partitionCount: 5
-
-  # Topic-specific settings
-  configs:
-    min.insync.replicas: "3"
-    segment.bytes: "1073741824"  # 1GB
-    compression.type: "producer"
-    # Optional: Additional durability settings
-    # unclean.leader.election.enable: "false"
-    # retention.ms: "604800000"  # 7 days

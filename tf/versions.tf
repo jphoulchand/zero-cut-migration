@@ -6,11 +6,11 @@ terraform {
   # Then run: terraform init -migrate-state
   #
   # backend "s3" {
-  #   bucket         = "jph-demo-terraform-state"  # Update with your project_name
+  #   bucket         = "demo-project-terraform-state"  # Update with your project_name
   #   key            = "terraform.tfstate"
   #   region         = "eu-west-1"                  # Update with your aws_region
   #   encrypt        = true
-  #   dynamodb_table = "jph-demo-terraform-locks"  # Update with your project_name
+  #   dynamodb_table = "demo-project-terraform-locks"  # Update with your project_name
   # }
 
   required_providers {

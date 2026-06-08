@@ -57,10 +57,10 @@ Jumpbox -> dnsmasq (127.0.0.1) -> System Nodes:30053 -> CoreDNS
 **Usage**:
 ```bash
 # Copy to jumpbox
-scp -i ~/.ssh/jphoulchand_csta.pem tf/scripts/setup-jumpbox-dns-nodeport.sh ec2-user@<jumpbox-ip>:~/
+scp -i ~/.ssh/your-key.pem tf/scripts/setup-jumpbox-dns-nodeport.sh ec2-user@<jumpbox-ip>:~/
 
 # SSH and run
-ssh -i ~/.ssh/jphoulchand_csta.pem ec2-user@<jumpbox-ip>
+ssh -i ~/.ssh/your-key.pem ec2-user@<jumpbox-ip>
 sudo bash setup-jumpbox-dns-nodeport.sh
 ```
 
@@ -124,7 +124,7 @@ If you need to reconfigure the jumpbox manually:
 
 ```bash
 # SSH to jumpbox
-ssh -i ~/.ssh/jphoulchand_csta.pem ec2-user@<jumpbox-ip>
+ssh -i ~/.ssh/your-key.pem ec2-user@<jumpbox-ip>
 
 # Download and run install script
 curl -O https://raw.githubusercontent.com/.../install_binaries.sh
@@ -135,8 +135,8 @@ sudo bash install_binaries.sh
 
 ```bash
 # Option 1: Use standalone script
-scp -i ~/.ssh/jphoulchand_csta.pem tf/scripts/setup-jumpbox-dns-nodeport.sh ec2-user@<jumpbox-ip>:~/
-ssh -i ~/.ssh/jphoulchand_csta.pem ec2-user@<jumpbox-ip>
+scp -i ~/.ssh/your-key.pem tf/scripts/setup-jumpbox-dns-nodeport.sh ec2-user@<jumpbox-ip>:~/
+ssh -i ~/.ssh/your-key.pem ec2-user@<jumpbox-ip>
 sudo bash setup-jumpbox-dns-nodeport.sh
 
 # Option 2: Manual configuration (see kafka/CONFIGURE-JUMPBOX-DNS.md)
@@ -148,7 +148,7 @@ sudo bash setup-jumpbox-dns-nodeport.sh
 
 ```bash
 # SSH to jumpbox
-ssh -i ~/.ssh/jphoulchand_csta.pem ec2-user@<jumpbox-ip>
+ssh -i ~/.ssh/your-key.pem ec2-user@<jumpbox-ip>
 
 # View cloud-init output
 sudo cat /var/log/cloud-init-output.log

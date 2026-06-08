@@ -41,7 +41,7 @@ kubernetes_version = "1.34"  # Stage 1 target
 ```bash
 # 1. Verify current version
 aws eks describe-cluster \
-  --name jph-demo-cluster \
+  --name demo-cluster \
   --region eu-west-1 \
   --query 'cluster.version' \
   --output text
@@ -64,7 +64,7 @@ terraform apply
 
 # 4. Verify upgrade completed
 aws eks describe-cluster \
-  --name jph-demo-cluster \
+  --name demo-cluster \
   --region eu-west-1 \
   --query 'cluster.version' \
   --output text
@@ -72,7 +72,7 @@ aws eks describe-cluster \
 
 # 5. Check addon status
 aws eks list-addons \
-  --cluster-name jph-demo-cluster \
+  --cluster-name demo-cluster \
   --region eu-west-1
 
 # Each addon should show status: ACTIVE
@@ -159,7 +159,7 @@ terraform apply
 
 # 4. Verify final version
 aws eks describe-cluster \
-  --name jph-demo-cluster \
+  --name demo-cluster \
   --region eu-west-1 \
   --query 'cluster.version' \
   --output text
@@ -167,7 +167,7 @@ aws eks describe-cluster \
 
 # 5. Verify all addons updated
 aws eks describe-addon \
-  --cluster-name jph-demo-cluster \
+  --cluster-name demo-cluster \
   --addon-name coredns \
   --region eu-west-1 \
   --query 'addon.addonVersion'
@@ -265,7 +265,7 @@ Confluent Ops: (latest) → 0.1351.59 (single update, both stages)
 
 set -euo pipefail
 
-CLUSTER_NAME="jph-demo-cluster"
+CLUSTER_NAME="demo-cluster"
 REGION="eu-west-1"
 
 echo "=== EKS Staged Upgrade: 1.33 → 1.34 → 1.35 ==="
@@ -355,6 +355,6 @@ echo "Verify with: kubectl get nodes && kubectl get pods -A"
 ---
 
 **Upgrade Date:** 2026-05-23  
-**Cluster:** jph-demo-cluster  
+**Cluster:** demo-cluster  
 **Region:** eu-west-1  
 **Strategy:** Staged (1.33→1.34→1.35)

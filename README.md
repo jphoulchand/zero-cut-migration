@@ -57,6 +57,9 @@ This project demonstrates a highly available, cost-optimized Kafka deployment on
 │   ├── QUICKSTART.md        # 5-minute deployment
 │   └── DNS-ARCHITECTURE.md  # DNS resolution details
 │
+├── busybox-debug-deployment.yaml  # Network testing pods (3 replicas)
+├── network-test.sh          # Automated network test suite
+├── NETWORK-TESTING.md       # Network performance testing guide
 └── README.md                # This file
 ```
 
@@ -140,11 +143,47 @@ kafka-topics --bootstrap-server kafka.confluent.svc.cluster.local:9071 --list
 
 ## Documentation
 
+### Core Documentation
+
+- **[README.md](README.md)** - This file (project overview)
+- **[OPERATIONS.md](OPERATIONS.md)** - Operational procedures and runbooks
+- **[main.md](main.md)** - Additional project notes
+
+### Infrastructure (Terraform)
+
 - **[tf/README.md](tf/README.md)** - Terraform infrastructure guide
+- **[tf/DNS-SETUP.md](tf/DNS-SETUP.md)** - DNS infrastructure setup
+- **[tf/STAGED-UPGRADE.md](tf/STAGED-UPGRADE.md)** - EKS upgrade procedures
+- **[tf/UPGRADE-2026-05-23.md](tf/UPGRADE-2026-05-23.md)** - Specific upgrade log
+- **[tf/scripts/README.md](tf/scripts/README.md)** - Terraform scripts documentation
+
+### Kafka Deployment
+
 - **[kafka/README.md](kafka/README.md)** - Complete Kafka deployment guide
 - **[kafka/QUICKSTART.md](kafka/QUICKSTART.md)** - Fast 5-minute deployment
-- **[kafka/DNS-ARCHITECTURE.md](kafka/DNS-ARCHITECTURE.md)** - DNS resolution details
-- **[tf/STAGED-UPGRADE.md](tf/STAGED-UPGRADE.md)** - EKS upgrade procedures
+- **[kafka/DEPLOYMENT-SUMMARY.md](kafka/DEPLOYMENT-SUMMARY.md)** - Deployment summary
+
+### DNS Configuration
+
+- **[kafka/DNS-ARCHITECTURE.md](kafka/DNS-ARCHITECTURE.md)** - DNS resolution architecture
+- **[kafka/CONFIGURE-JUMPBOX-DNS.md](kafka/CONFIGURE-JUMPBOX-DNS.md)** - Jumpbox DNS configuration
+
+### Monitoring & Operations
+
+- **[kafka/MONITORING-SETUP.md](kafka/MONITORING-SETUP.md)** - Monitoring setup guide
+- **[kafka/MONITORING-JOLOKIA.md](kafka/MONITORING-JOLOKIA.md)** - Jolokia monitoring
+- **[kafka/JOLOKIA-EXAMPLES.md](kafka/JOLOKIA-EXAMPLES.md)** - Jolokia query examples
+- **[kafka/REPLICATION-MONITORING.md](kafka/REPLICATION-MONITORING.md)** - Replication performance monitoring
+- **[kafka/AUTO-CLEANUP.md](kafka/AUTO-CLEANUP.md)** - Automated cleanup procedures
+
+### Network & Performance Testing
+
+- **[NETWORK-TESTING.md](NETWORK-TESTING.md)** - Cross-AZ network performance testing
+
+### Cost Analysis
+
+- **[COST-ANALYSIS-CURRENT.md](COST-ANALYSIS-CURRENT.md)** - Current cost analysis
+- **[COST-ANALYSIS-MAY-2026.md](COST-ANALYSIS-MAY-2026.md)** - May 2026 cost analysis
 
 ## Deployment Status
 

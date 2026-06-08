@@ -1,0 +1,223 @@
+---
+# =============================================================================
+# Busybox Debug Deployment - 3 Pods in Different AZs with Network Perf Testing
+# =============================================================================
+#
+# Purpose: Network performance testing pods scheduled across different AZs
+#          on the same Karpenter NodeClass as Kafka
+#
+# Features:
+#   - 3 replicas spread across 3 different availability zones
+#   - Python 3.11 with netperf.py script pre-loaded
+#   - netperf.py server runs automatically on port 5001 on each pod
+#   - Uses same toleration (arch=arm64:NoSchedule) as Kafka pods
+#   - Uses same node selector to target kafka-arm64 nodes
+#
+# Usage:
+#   kubectl apply -f busybox-debug-deployment.yaml
+#
+#   # Get pod IPs and AZs
+#   kubectl get pods -n confluent -l app=busybox-debug -o wide
+#
+#   # Each pod runs a netperf server on port 5001 automatically
+#   # Run client tests from any pod to measure cross-AZ network performance:
+#
+#   # Get pod IPs
+#   POD0_IP=$(kubectl get pod busybox-debug-0 -n confluent -o jsonpath='{.status.podIP}')
+#   POD1_IP=$(kubectl get pod busybox-debug-1 -n confluent -o jsonpath='{.status.podIP}')
+#   POD2_IP=$(kubectl get pod busybox-debug-2 -n confluent -o jsonpath='{.status.podIP}')
+#
+#   # Test from pod-0 to pod-1 (cross-AZ)
+#   kubectl exec -it busybox-debug-0 -n confluent -- python /scripts/netperf.py -m client -a $POD1_IP -p 5001 -d 1000 -b 65536
+#
+#   # Test from pod-0 to pod-2 (cross-AZ)
+#   kubectl exec -it busybox-debug-0 -n confluent -- python /scripts/netperf.py -m client -a $POD2_IP -p 5001 -d 1000 -b 65536
+#
+#   # Test from pod-1 to pod-2 (cross-AZ)
+#   kubectl exec -it busybox-debug-1 -n confluent -- python /scripts/netperf.py -m client -a $POD2_IP -p 5001 -d 1000 -b 65536
+#
+# =============================================================================
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netperf-script
+  namespace: confluent
+data:
+  netperf.py: |
+    import socket
+    import argparse
+    import time
+
+    def server_mode(port, buffer_size):
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind(('0.0.0.0', port))
+        server_socket.listen(1)
+        print(f"Server listening on port {port}")
+
+        conn, addr = server_socket.accept()
+        print(f"Connection from {addr}")
+
+        start_time = time.time()
+        total_received = 0
+
+        while True:
+            data = conn.recv(buffer_size)
+            if not data:
+                break
+            total_received += len(data)
+
+        conn.close()
+        server_socket.close()
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        transfer_speed = total_received / elapsed_time / (1024 * 1024)  # in MB/s
+
+        print(f"Data received: {total_received / (1024 * 1024)} MB")
+        print(f"Time taken: {elapsed_time} seconds")
+        print(f"Transfer speed: {transfer_speed:.2f} MB/s")
+
+    def client_mode(host, port, buffer_size, data_size):
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((host, port))
+
+        data = b'a' * buffer_size
+        total_sent = 0
+
+        start_time = time.time()
+
+        while total_sent < data_size * 1024 * 1024:
+            sent = client_socket.send(data)
+            if sent == 0:
+                break
+            total_sent += sent
+
+        client_socket.close()
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        transfer_speed = total_sent / elapsed_time / (1024 * 1024)  # in MB/s
+
+        print(f"Data sent: {total_sent / (1024 * 1024)} MB")
+        print(f"Time taken: {elapsed_time} seconds")
+        print(f"Transfer speed: {transfer_speed:.2f} MB/s")
+
+    if __name__ == "__main__":
+        parser = argparse.ArgumentParser(description='Network Throughput Measurement')
+        parser.add_argument('-m', '--mode', choices=['server', 'client'], required=True, help='Select mode: server or client')
+        parser.add_argument('-a', '--address', required=True, help='Remote address (client) or listening address (server)')
+        parser.add_argument('-p', '--port', type=int, required=True, help='Remote port (client) or listening port (server)')
+        parser.add_argument('-b', '--buffer-size', type=int, default=1024, help='TCP buffer size')
+        parser.add_argument('-d', '--data-size', type=int, default=100, help='Amount of data to send in megabytes')
+
+        args = parser.parse_args()
+
+        if args.mode == 'server':
+            server_mode(args.port, args.buffer_size)
+        elif args.mode == 'client':
+            client_mode(args.address, args.port, args.buffer_size, args.data_size)
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: busybox-debug
+  namespace: confluent
+  labels:
+    app: busybox-debug
+spec:
+  serviceName: busybox-debug
+  replicas: 3
+  selector:
+    matchLabels:
+      app: busybox-debug
+
+  template:
+    metadata:
+      labels:
+        app: busybox-debug
+        purpose: network-testing
+    spec:
+      # Match Kafka's toleration to schedule on ARM64 Karpenter nodes
+      tolerations:
+      - key: "arch"
+        operator: "Equal"
+        value: "arm64"
+        effect: "NoSchedule"
+
+      # Target the same node type as Kafka brokers
+      nodeSelector:
+        node-type: kafka-arm64
+        architecture: arm64
+
+      # Anti-affinity: Spread pods across different AZs
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - busybox-debug
+            topologyKey: topology.kubernetes.io/zone
+
+      containers:
+      - name: busybox
+        image: python:3.11-alpine
+        command:
+          - /bin/sh
+          - -c
+          - |
+            echo "Starting netperf server on port 5001..."
+            while true; do
+              python /scripts/netperf.py -m server -a 0.0.0.0 -p 5001 -b 65536
+              echo "Server stopped, restarting in 2 seconds..."
+              sleep 2
+            done
+
+        # Mount the netperf script
+        volumeMounts:
+        - name: netperf-script
+          mountPath: /scripts
+          readOnly: true
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+
+        # Open port 5001 for netperf testing
+        ports:
+        - containerPort: 5001
+          name: netperf
+          protocol: TCP
+
+      volumes:
+      - name: netperf-script
+        configMap:
+          name: netperf-script
+          defaultMode: 0755
+
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: busybox-debug
+  namespace: confluent
+spec:
+  clusterIP: None  # Headless service for StatefulSet
+  selector:
+    app: busybox-debug
+  ports:
+  - port: 5001
+    targetPort: 5001
+    protocol: TCP
+    name: netperf

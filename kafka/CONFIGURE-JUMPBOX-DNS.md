@@ -17,10 +17,10 @@ Cost: FREE (was $16/month with NLB)
 
 ```bash
 # On your local machine
-scp -i ~/.ssh/jphoulchand_csta.pem tf/scripts/setup-jumpbox-dns-nodeport.sh ec2-user@108.131.238.36:~/
+scp -i ~/.ssh/your-key.pem tf/scripts/setup-jumpbox-dns-nodeport.sh ec2-user@<jumpbox-ip>:~/
 
 # SSH to jumpbox
-ssh -i ~/.ssh/jphoulchand_csta.pem ec2-user@108.131.238.36
+ssh -i ~/.ssh/your-key.pem ec2-user@<jumpbox-ip>
 
 # Run setup script
 sudo bash setup-jumpbox-dns-nodeport.sh
@@ -32,7 +32,7 @@ This installs dnsmasq and configures it to forward cluster.local queries to the 
 
 ```bash
 # SSH to jumpbox
-ssh -i ~/.ssh/jphoulchand_csta.pem ec2-user@108.131.238.36
+ssh -i ~/.ssh/your-key.pem ec2-user@<jumpbox-ip>
 
 # Install dnsmasq
 sudo yum install -y dnsmasq
@@ -252,7 +252,7 @@ The systemd-resolved method persists across reboots. To verify:
 sudo reboot
 
 # After reboot, SSH back in and test
-ssh -i ~/.ssh/jphoulchand_csta.pem ec2-user@108.131.238.36
+ssh -i ~/.ssh/your-key.pem ec2-user@<jumpbox-ip>
 dig kafka.confluent.svc.cluster.local +short
 ```
 
@@ -269,11 +269,11 @@ dig kafka.confluent.svc.cluster.local +short
 # Current Configuration
 NLB Hostname: a5c08042efb3c426cab26b80950cdd9c-5cc13eb909a94678.elb.eu-west-1.amazonaws.com
 NLB IPs: 52.214.59.204, 52.209.78.3, 52.214.106.159
-Jumpbox IP: 108.131.238.36
-SSH Key: ~/.ssh/jphoulchand_csta.pem
+Jumpbox IP: <jumpbox-ip>
+SSH Key: ~/.ssh/your-key.pem
 
 # One-Liner Setup
-ssh -i ~/.ssh/jphoulchand_csta.pem ec2-user@108.131.238.36 "sudo tee /etc/systemd/resolved.conf.d/kube-dns.conf > /dev/null <<EOF
+ssh -i ~/.ssh/your-key.pem ec2-user@<jumpbox-ip> "sudo tee /etc/systemd/resolved.conf.d/kube-dns.conf > /dev/null <<EOF
 [Resolve]
 DNS=52.214.59.204 52.209.78.3 52.214.106.159
 Domains=confluent.svc.cluster.local svc.cluster.local cluster.local
